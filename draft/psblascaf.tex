@@ -20,9 +20,9 @@
 
 
 %\pretitle{Pretitle}
-\title{Solving sparse linear systems of equations using CAF}
+\title{Solving Sparse Linear Systems of Equations using CAF}
 
-\markboth{}{September 2016\hb}
+%\markboth{}{September 2016\hb}
 %\subtitle{Subtitle}
 
 \author[A]{\fnms{Ambra} \snm{Abdullahi Hassan}%
@@ -38,32 +38,39 @@ and
 Fortran Coarrays (CAF) has been part of the Fortran standard since Fortran 2008 and it provides a syntactic extension of Fortran to support parallel programming.
 Although MPI is the de facto standard for parallel programs running on distributed memory systems and few scientific softwares are written in CAF, many scientific applications could benefit from the use of CAF. 
 We present the migration from MPI to CAF of the libraries PSBLAS  and MLD2P4 for the solution of large systems of equations using iterative methods and preconditioners. 
-In this paper we describe the best-usage startegies implemented in PSBLAS and MLD2P4 and we show some performance results obtained on linear systems arising from discretization of 2D and 3D PDEs.  
+In this paper we describe the best-usage strategies implemented in PSBLAS and MLD2P4 and we show some performance results obtained on linear systems arising from discretization of 2D and 3D PDEs.  
 \end{abstract}
 
 \begin{keyword}
 \end{keyword}
 \end{frontmatter}
-\markboth{September 2016\hb}{September 2016\hb}
+
+%\markboth{September 2016\hb}{September 2016\hb}
 %\thispagestyle{empty}
 %\pagestyle{empty}
+
+
 \section{Introduction}
-Fortran has been and still is a dominant language in High Performance Computing. In past decades, Fortran has greatly developed,  and now supports class abstraction, object-oriented programming, pure functions an coarrays\cite{r7}. 
+
+Fortran has been and still is a dominant language in High Performance Computing. In past decades, Fortran has greatly developed,  and now supports class abstraction, object-oriented programming, pure functions, and coarrays~\cite{Metcalf:2011:MFE}. 
 Fortran Coarrays (CAF) has been part of the Fortran standard since Fortran 2008 and it provides a syntactic extension of Fortran to support parallel programming.  
-Following Partitioned Global Adress Space programming model, with CAF the program is replicated among a certain number of images, executing asynchronously.
-Combining, elegancy and simplicity, CAF allows easily for one-sided communications, potentially reducing shynchronization and code complexity.
+Following Partitioned Global Address Space programming model, with CAF the program is replicated among a certain number of images, executing asynchronously.
+Combining, elegancy and simplicity, CAF allows easily for one-sided communications, potentially reducing synchronization and code complexity.
 CAF is a language-based approach, which means it is bounds on specific compilers: when a good implementation is available, compiler can concurrently consider serial aspects and communication for optimization. Additionally, if vendors compiler provides support for OpenAcc, the user can easily get a dual benefit form the combined use of CAF and GPUs.  
-MPI (Message Passing Interface) defines a suite of functions for communication exchange between processes. Differently from CAF, it is library-based: it means that while independent from a specific compiler, the user is bound to the vendor's fine-tuning of the MPI library \cite{r4}.
+MPI (Message Passing Interface) defines a suite of functions for communication exchange between processes. Differently from CAF, it is library-based: it means that while independent from a specific compiler, the user is bound to the vendor's fine-tuning of the MPI library~\cite{Garain:2015}.
 Although MPI is the de facto standard for parallel programs running on distributed memory systems and few scientific softwares are written in CAF, we think that many scientific applications could benefit from the use of CAF. For this to be possible, studies have to be carried on the impact of CAF on performances and quality of scientific softwares.
-In this paper we focus on the solution of large and sparse linear systems of equations and we propose the migration of the PSBLAS\cite{r1} and MLD2P4\cite{r2} libraries. The first one implements various iterative solvers while the second exploit most of the communications subroutines in PSBLAS to implement multigrid preconditioners. Using the combinations of the two libraries, we can compare performances of real-world problems in MPI and in CAF.
-Few attempts to implement multigrid solvers in CAF have been made, for example in \cite{r3} (in which early versions of CAF and MPI have been used).  In \cite{r4} a comparison between MPI3 and CAF is presented for spectral techniques, multigrid techniques and for applications drawn from computational fluid dynamics. It shows that Cray implementations of MPI3 and CAF performances in message passing are comparable (with CAF slightly outperforms MPI3 in some cases), and it points out the advantages of CAF when it comes to ease of implementation.
-In this paper we compare performances of CAF and MPI on problems arising from discretization of 2D and 3D PDEs, using preconditioned iterative methods (also with multigrid preconditioners). We used the GNU compiler and the OpenCoarray library \cite{r5}, both opensource and easily accessible.
+In this paper we focus on the solution of large and sparse linear systems of equations and we propose the migration of the PSBLAS~\cite{PSBLAS} and MLD2P4~\cite{mld-toms} libraries. 
+The first one implements various iterative solvers while the second exploits most of the communications subroutines in PSBLAS to implement multigrid preconditioners. Using the combinations of the two libraries, we can compare performances of real-world problems in MPI and in CAF.
+Few attempts to implement multigrid solvers in CAF have been made, for example in~\cite{Numrich:1998} (in which early versions of CAF and MPI have been used).  In~\cite{Garain:2015} a comparison between MPI3 and CAF is presented for spectral techniques, multigrid techniques and for applications drawn from computational fluid dynamics. It shows that Cray implementations of MPI3 and CAF performances in message passing are comparable (with CAF slightly outperforms MPI3 in some cases), and it points out the advantages of CAF when it comes to ease of implementation.
+In this paper we compare performances of CAF and MPI on problems arising from discretization of 2D and 3D PDEs, using preconditioned iterative methods (also with multigrid preconditioners). We used the GNU compiler and the OpenCoarray library~\cite{PGAS14}, both opensource and easily accessible.
 \section{Fortran Coarray}
 Coarray Fortran extends Fortran language with minimal syntactic constructs, allowing for Single Program Multi Data (SPMD) parallel programming. 
-It follows the Partitioned Global Address Space (PGAS) parallel programming model, which it is an effective alternative combining the advantages of The SPMD programming style for distributed memory systems with the data referencing semantics of shared memory systems.In PGAS model threads share the global address space, each having a portion of space which is local to it. Other than CAF Unified Parallel C (UPC) \cite{r8}, Chapel \cite{r9}, X10 \cite{r10} and SHMEM are all based on the PGAS model.
-With CAF, Fortran users do not need to invoke subroutines from an  external API (as in MPI), nor preprocessing directives (as in OpenMP) to create parallel progarams. 
-Since most of the parallel bookkeeping is handle behind the scene by the compiler, CAF achieves a good trade-off between readability and performance and compared to MPI the parallelization is easier to follow, the code is shorter and less complex. We can think, for example, of the burden of passing a non-contiguous array using MPI   or to the fact that with CAF there is no need to write seprate code for sending and receiving a message.
-Coarrays are fully supported by Cray and Intel compilers. Although GNU compilers provide only partial coarray support  (only single image),  the open source openCoarrays project provides two coarray transport layers based on MPI and on GASNet \cite{r1}. 
+It follows the Partitioned Global Address Space (PGAS) parallel programming model, which it is an effective alternative combining the advantages of the SPMD programming style for distributed memory systems with the data referencing semantics of shared memory systems. 
+In PGAS model threads share the global address space, each having a portion of space which is local to it. 
+Besides CAF, Unified Parallel C (UPC)~\cite{UPCSpec}, Chapel~\cite{chapel}, X10~\cite{Charles:2005} and SHMEM are all based on the PGAS model.
+With CAF, Fortran users do not need to invoke subroutines from an  external API (as in MPI), nor preprocessing directives (as in OpenMP) to create parallel programs. 
+Since most of the parallel bookkeeping is handle behind the scene by the compiler, CAF achieves a good trade-off between readability and performance and compared to MPI the parallelization is easier to follow, the code is shorter and less complex. We can think, for example, of the burden of passing a non-contiguous array using MPI   or to the fact that with CAF there is no need to write separate code for sending and receiving a message.
+Coarrays are fully supported by Cray and Intel compilers. Although GNU compilers provide only partial coarray support  (only single image),  the open source openCoarrays project provides two coarray transport layers based on MPI and on GASNet~\cite{PGAS14}. 
 
 In CAF the program is replicated a fixed number of times and each replication (called images) executes asynchronously having its own set of data objects. 
 Some variables can be declared as coarrays through the use of coindices (indicated by square brackets) with a syntax very similar to normal Fortran array syntax. 
@@ -77,21 +84,21 @@ Coarrays can be accessed by the other images, thus enabling data exchange.
 co_a[1]=co_a
 \end{lstlisting}
 
-Each image is assigned a unique index, through which the programmer can control the flow of the execution. Image indices start from 1 (not from 0 as MPI process ranks) and can be retrieved using the intrinsic function $this\_image()$. The number of total images can be rerieved using the function $num\_images()$. The total number of images can be different from the total number od processors and it can be decided at compile, link or runtime depending on the implementation. 
+Each image is assigned a unique index, through which the programmer can control the flow of the execution. Image indices start from 1 (not from 0 as MPI process ranks) and can be retrieved using the intrinsic function $this\_image()$. The number of total images can be retrieved using the function $num\_images()$. The total number of images can be different from the total number od processors and it can be decided at compile, link or runtime depending on the implementation. 
 
-CAF communications are syncronous and non-blocking. 
+CAF communications are synchronous and non-blocking. 
 To avoid deadlock and race conditions, the programmer has to ensure consistency through the use of synchronization statements.
-The sync all statement corresponds to a global barrier (all images waiting for each tohers) while sync images allows for explicit syncronization of single images. Moreover, with CAF events, an image can use an event post statement to notify another images or it can wait for an event posted by another image before continuing excution. This allows for more sophisticated syncronization strategies.  
+The sync all statement corresponds to a global barrier (all images waiting for each tohers) while sync images allows for explicit synchronization of single images. Moreover, with CAF events, an image can use an event post statement to notify another images or it can wait for an event posted by another image before continuing execution. This allows for more sophisticated synchronization strategies.  
 
-Other than explicit syncronization, in a CAF program there can be implicit syncronization points. The programmer must be aware of this, because they can lead to a drastic change in performance.
-An example of an implicit syncronization point is allocation or deallocation of an allocatable coarray:
+Other than explicit synchronization, in a CAF program there can be implicit synchronization points. The programmer must be aware of this, because they can lead to a drastic change in performance.
+An example of an implicit synchronization point is allocation or deallocation of an allocatable coarray:
 
 \begin{lstlisting}
 integer, allocatable :: co_a(:,:)[:]
 allocate(co_a(i,10)[*])
 \end{lstlisting}
 
-Of course, for code between synchronizations, the compiler can use the usual optimization techniques as if only one image is present \cite{r6}.
+Of course, for code between synchronizations, the compiler can use the usual optimization techniques as if only one image is present~\cite{CAF}.
 
 \section{PSBLAS and MLD2P4}
 
@@ -105,16 +112,16 @@ We detected three communication patterns to modify:
 \item Point-to-point communication in data distribution
 \end{enumerate}
 
-In the following, we address the three of them separetely.
+In the following, we address the three of them separately.
 
-\subsection{Halo exchange}
+\subsection{Halo Exchange}
 
-In PSBLAS \cite{r1}, data distribution is performed keeping in mind the underlying physical problem, such as the discretization mesh of the PDE. 
+In PSBLAS~\cite{PSBLAS}, data distribution is performed keeping in mind the underlying physical problem, such as the discretization mesh of the PDE. 
 Each point in the discretization mesh corresponds to a variable and, consequently, to an index in the coefficient matrix. We say that index $i$ depends upon index $j$ if $a_{ij}\neq0$. 
 In the process of distributing data among processes, the original domain is divided into subdomains. 
 In each subdomain a boundary point is a point depending on points from different domains. An halo point is the one for which there is at least one boundary point in another domain depending upon it. 
 This means that when performing matrix and vector operations (such as a matrix-vector production), halo points will be requested by other processes and the amount of exchanged data is given by the cardinality of the boundary points. 
-Every time this happens we peform a so-called halo exchange operation. We can think of halo exchange as a sparse all-to-all communication (or as an MPI\_ALLTOALLV operation, in MPI jargon).
+Every time this happens we perform a so-called halo exchange operation. We can think of halo exchange as a sparse all-to-all communication (or as an MPI\_ALLTOALLV operation, in MPI jargon).
 \begin{figure}
 \includegraphics[height=1.5in, width=4.65in]{halo2.png}
 \caption{Example of halo exchange on 2 images. }
@@ -184,7 +191,7 @@ Keeping this in mind, we detected two differences between the MPI and the CAF ve
 
 Less input parameters results in a more clear interface, and we get a significant reduction in the number of lines of the code (regarding only the halo exchange).
   
-\subsection{Collective subroutines and point-to-point in data distribution}
+\subsection{Collective Subroutines and Point-to-point in Data Distribution}
 
 Here we take into account all the subroutines performing collective communications, in which all images take part in the communication. While rewriting the halo exchange using CAF leads to a reduction in the number of lines in the code, in this case we can expect an increasing in the length of the code. This is because MPI provides an interface for most of the collectives we may need in solving a sparse linear system in parallel. For CAF collective subroutines are reduced in number; they are:
 
@@ -273,23 +280,18 @@ call co_reduce(co_dat_,caf_dnrm2)
 \end{lstlisting}}
 \end{center}
 In this case the CAF syntax is more compact and there is no need to use the extra euxiliary variable dat\_.
-Finally, we modified the psb\_matdist subroutines, an utility subroutine that uses point-to-point communications to distribute a matrix among processors according user defined data distribution. In this case, for both MPI and CAF we are using one-sided communications. In the case of CAF, to ensure performance optimizations, we used events to ensure syncronization among images. 
+Finally, we modified the psb\_matdist subroutines, an utility subroutine that uses point-to-point communications to distribute a matrix among processors according user defined data distribution. In this case, for both MPI and CAF we are using one-sided communications. In the case of CAF, to ensure performance optimizations, we used events to ensure synchronization among images. 
 
-\subsection{conclusions}
+\section{Conclusions}
 
 We point out that in the migration from MPI to CAF we retained as much as the original code and structure that we could. While this can lead to CAF code which is not as clear and readable as it would be if the original software was thought and written in CAF from the beginning, we think that the previous examples show the capability of CAF to express parallelism in a simpler way than MPI.  
  
+\bibliographystyle{unsrt}
+\bibliography{psblas-caf}
+
+\end{document}
+ 
 \begin{thebibliography}{99}
-\bibitem{r1}
-Filippone, Salvatore, and Michele Colajanni. "PSBLAS: A library for parallel linear algebra computation on sparse matrices." ACM Transactions on Mathematical Software (TOMS) 26.4 (2000): 527-550
-\bibitem{r2}
-D’Ambra, Pasqua, Daniela Di Serafino, and Salvatore Filippone. "MLD2P4: a package of parallel algebraic multilevel domain decomposition preconditioners in Fortran 95." ACM Transactions on Mathematical Software (TOMS) 37.3 (2010): 30.
-\bibitem{r3}
-Numrich, Robert W., John Reid, and Kieun Kim. "Writing a multigrid solver using co-array fortran." International Workshop on Applied Parallel Computing. Springer Berlin Heidelberg, 1998.
-\bibitem{r4}
-Garain, Sudip, Dinshaw S. Balsara, and John Reid. "Comparing Coarray Fortran (CAF) with MPI for several structured mesh PDE applications." Journal of Computational Physics 297 (2015): 237-253.
-\bibitem{r5}
-Fanfarillo, Alessandro, et al. "OpenCoarrays: open-source transport layers supporting coarray Fortran compilers." Proceedings of the 8th International Conference on Partitioned Global Address Space Programming Models. ACM, 2014.
 \bibitem{r6}
 Numrich, Robert W., and John Reid. "Co-Array Fortran for parallel programming." ACM Sigplan Fortran Forum. Vol. 17. No. 2. ACM, 1998.
 \bibitem{r7}
@@ -298,13 +300,9 @@ Metcalf, Michael, John Reid, and Malcolm Cohen. Modern Fortran Explained. Oxford
 UPC Consortium. UPC Language Specifications, v1.2.
 Tech Report LBNL-59208, Lawrence Berkeley
 National Lab, 2005.
-\bibitem{r9}
-Chamberlain, B.L. Chapel. In Programming Models
-for Parallel Computing. MIT Press, 2015.
 \bibitem{r10}
 V. Saraswat, B. Bloom, I. Peshansky, O. Tardieu, and
 D. Grove. The X10 language specification, v2.2.3,
 2012.
-
 \end{thebibliography}
-\end{document}
+
