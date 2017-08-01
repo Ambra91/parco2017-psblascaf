@@ -102,6 +102,24 @@ Of course, for code between synchronizations, the compiler can use the usual opt
 
 \section{PSBLAS and MLD2P4}
 
+Most of scientific and engineering applications require solving a large sparse linear system of equations efficiently on parallel machines.  
+In these cases direct solvers such as Gaussian elimination are usually ineffective and iterative solvers are preferred.
+These techniques produce a sequence of approximate solutions, ideally converging to the real one. Rate of convergence of iterative methods depends upon the condition number of the matrix, hence iterative methods usually involve a transforation of the original matrix into a more well-conditioned one. This transformation is called a preconditioner ~\cite{barrett1994templates}. Among iterative methods, Krylov methods are based on minimizing the residual over a Krylov subspace and are considered among the most important \cite{ipsen1998idea}. The Conjugate Gradient (CG) \cite{shewchuk1994introduction}, the Generalized Minimal Residual (GMRES) \cite{saad1986gmres} and the Biconjugate Gradient (BiCG) \cite{van1992bi} are all Krylov methods. 
+Multigrid methods have also shown promising results in solving linear systems arising from partial differential equations and they have the nice property that they can achieve convergence rates which are, in theory, independent of the mesh size ~\cite{saad2003iterative}.
+Multigrid can be used as stand-alone solvers ~\cite{brandt1977multi} or as preconditioner for a Kylov subspace method ~\cite{bramble1990parallel}.
+PSBLAS is a library of Basic Linear Algebra Subroutineas for parallel sparse applications is designed to handle parallel implementation of iterative solvers for sparse linear systems. It is implemented if object-oriented Fortran 2003. The serial computations are based on the serial sparse BLAS ~\cite{duff2002overview}, while the inter-process massage exchanges are encapsulated in an application layer inspired by the Basic Linear Algebra Communication Subroutines (BLACS) library ~\cite{whaley1997user}. PSBLAS library contains, among the others, subroutines for sparse-matrix-by-dense-matrix multiplication, sparse triangular system solution, dot product, sparse matrix and data distribution preprocessing.
+While addressing a distributed memory execution model the current PSBLAS design does not preclude different implementation pradigms.
+MLD2P4 (Multi-level Domain Decomposition Parallel Preconditioners Package based on PSBLAS) is a package for parallel algebraic multilevel preconditioners. A purely algebraic approach is used and no information about the underlying physical grid is needed to build the preconditioner. MLD2P4 preconditioner are intended to be used in conjuction with the iterative solvers available in the context of PSBLAS. 
+Since in MLD2P4 inter-process data communiations is managed through PSBLAS, writing a CAF version give us dual benefit:
+
+\begin{enumerate}
+\item First, we can compare MPI and CAF on Krylov subspace methods and simple preconditioners, usign PSBLAS
+\item Secondly, we can compare MPI and CAF on multilevel preconditioners, since MLD2P4 data communication is actually managed on PSBLAS.
+\end{enumerate}  
+
+Additionally, since both PSBLAS and MLD2P4 are open source, once the CAF version is released CAF programmers will be able to use them inside their scientific application.
+
+ 
 \section{Implementation}
 We converted the PSBLAS code gradually from MPI to CAF, thus having the two communication strategies coexisting in the same code. 
 We detected three communication patterns to modify:
