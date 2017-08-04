@@ -628,8 +628,13 @@ We successfully migrated PSBLAS library from MPI to CAF. Since MLD2P4 communicat
 
 Performance is a key factor, so we tested both the MPI and CAF versions on problems arising from discretization of 2D and 3D PDEs. Neither CAF nor MPI version has shown a clear superiority in terms of performance, with execution time almost identical in the two cases. So, the migration from MPI to CAF did not lead to a loss of performance.
 Additionally, we provided few examples of how CAF programmer choices can affect performance (for example: "get" versus "put" for one-sided communication, events versus $sync images$ for synchronization, clever coarrays allocation).
-  
- 
+
+\section{Acknowledgments} 
+This work has received funding from the European Union's Horizon 2020 Research
+and Innovation Programme under Grant Agreement No.~676629
+(Project EoCoE).
+% (call H2020-EINFRA-2015-1, project ID: 676629, \url{http://www.eocoe.eu}).
+The authors wish to thank prof. Pasqua D'Ambra (CNR, Napoli, Italy), for helping us running tests using the two versions of the software.
  
 \bibliographystyle{unsrt}
 \bibliography{psblas-caf}
