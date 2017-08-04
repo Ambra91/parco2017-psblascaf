@@ -378,20 +378,20 @@ avoided as much as possible.  Thus we declare communication
 buffers with the \verb|save| attribute to enable reuse, and we only
 need to reallocate occasionally when the size of the requested
 exchange does not fit into the available space. 
-\lstset{language=Fortran} 
-\begin{lstlisting}
-  if (psb_size(buffer) < xchg%max_buffer_size) then
-    if (allocated(buffer)) deallocate(buffer)
-    allocate(buffer(xchg%max_buffer_size)[*],stat=info)
-    if (allocated(sndbuf)) deallocate(sndbuf)
-    if (info == 0) allocate(sndbuf(xchg%max_buffer_size),stat=info)
-    if (info /= 0) then
-      info = psb_err_internal_error_
-      call psb_errpush(info,name,a_err='Coarray buffer allocation')
-      goto 9999
-    end if
-  end if
-\end{lstlisting}
+%% \lstset{language=Fortran} 
+%% \begin{lstlisting}
+%%   if (psb_size(buffer) < xchg%max_buffer_size) then
+%%     if (allocated(buffer)) deallocate(buffer)
+%%     allocate(buffer(xchg%max_buffer_size)[*],stat=info)
+%%     if (allocated(sndbuf)) deallocate(sndbuf)
+%%     if (info == 0) allocate(sndbuf(xchg%max_buffer_size),stat=info)
+%%     if (info /= 0) then
+%%       info = psb_err_internal_error_
+%%       call psb_errpush(info,name,a_err='Coarray buffer allocation')
+%%       goto 9999
+%%     end if
+%%   end if
+%% \end{lstlisting}
  With MPI the buffers are local, and since in most systems allocation
  is cheap we normally release the buffers to save memor.
 Before showing performance results for  the halo exchange, we 
@@ -441,8 +441,9 @@ techniques will be the subject of future work. In particular
 we have the implementations for the interfaces caf\_scatterv,
 caf\_gatherv, caf\_allgatherv, caf\_allgatherv caf\_gather,
 caf\_alltoallv and caf\_alltoall.  
-As an example, the code for the caf\_alltoall looks like:
+As an example, the code implementing the caf\_alltoall looks like:
 \lstset{language=Fortran} 
+\iffalse
 {\small
 \begin{lstlisting}
   subroutine caf_alltoall(snd,rcv, m, info)
@@ -488,6 +489,26 @@ As an example, the code for the caf\_alltoall looks like:
     if (allocated(buffer)) deallocate(buffer)
   end subroutine caf_alltoall
 \end{lstlisting}}
+\else
+{\small
+\begin{lstlisting}
+    me = this_image()
+    np = num_images()
+    snd_tot=m*np
+    rcv_start = (me-1)*m +1
+    rcv_finish = rcv_start + m - 1
+    do i=1,np
+      snd_start = (i-1)*m +1 
+      snd_finish = snd_start + m - 1
+      buffer(rcv_start:rcv_finish)[i]=snd(snd_start:snd_finish)
+    enddo
+    !sync to ensure all image has finishe the PUTs 
+    sync all
+    rcv(1:snd_tot)=buffer(1:snd_tot)
+\end{lstlisting}}
+\fi
+The actual code would contain a number of error checking options that
+are not shown here for clarity.
 For what it concerns the reduction operations, the \verb|co_reduce| is
 already part of the standard, and here the difference in code is
 obvious. For the  MPI version we have:
