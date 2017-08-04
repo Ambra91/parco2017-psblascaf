@@ -21,7 +21,7 @@
 
 
 %\pretitle{Pretitle}
-\title{Solving Sparse Linear Systems of Equations using CAF}
+\title{Solving Sparse Linear Systems of Equations using Fortran Coarrays}
 
 %\markboth{}{September 2016\hb}
 %\subtitle{Subtitle}
@@ -36,10 +36,18 @@ and
 \address[B]{Cranfield University}
 
 \begin{abstract}
-Fortran Coarrays (CAF) has been part of the Fortran standard since Fortran 2008 and it provides a syntactic extension of Fortran to support parallel programming.
-Although MPI is the de facto standard for parallel programs running on distributed memory systems and few scientific softwares are written in CAF, many scientific applications could benefit from the use of CAF. 
-We present the migration from MPI to CAF of the libraries PSBLAS  and MLD2P4 for the solution of large systems of equations using iterative methods and preconditioners. 
-In this paper we describe the best-usage strategies implemented in PSBLAS and MLD2P4 and we show some performance results obtained on linear systems arising from discretization of 2D and 3D PDEs.  
+Coarrays have been part of the Fortran standard since
+Fortran 2008 and provide a syntactic extension of Fortran to
+support parallel programming, often called Coarray Fortran (CAF). 
+Although MPI is the de facto standard for parallel programs running on
+distributed memory systems and few scientific softwares are written in
+CAF, many scientific applications could benefit from the use of CAF.  
+We present the migration from MPI to CAF of the libraries PSBLAS  and
+MLD2P4 for the solution of large systems of equations using iterative
+methods and preconditioners.  
+In this paper we describe the best-usage strategies implemented in
+PSBLAS and MLD2P4 and we show some performance results obtained on
+linear systems arising from discretization of 2D and 3D PDEs.   
 \end{abstract}
 
 \begin{keyword}
@@ -53,123 +61,299 @@ In this paper we describe the best-usage strategies implemented in PSBLAS and ML
 
 \section{Introduction}
 
-Fortran has been and still is a dominant language in High Performance Computing. In past decades, Fortran has greatly developed,  and now supports class abstraction, object-oriented programming, pure functions, and coarrays~\cite{Metcalf:2011:MFE}. 
-Fortran Coarrays (CAF) has been part of the Fortran standard since Fortran 2008 and it provides a syntactic extension of Fortran to support parallel programming.  
-Following Partitioned Global Address Space programming model, with CAF the program is replicated among a certain number of images, executing asynchronously.
-Combining, elegancy and simplicity, CAF allows easily for one-sided communications, potentially reducing synchronization and code complexity.
-CAF is a language-based approach, which means it is bounds on specific compilers: when a good implementation is available, compiler can concurrently consider serial aspects and communication for optimization. Additionally, if vendors compiler provides support for OpenAcc, the user can easily get a dual benefit form the combined use of CAF and GPUs.  
-MPI (Message Passing Interface) defines a suite of functions for communication exchange between processes. Differently from CAF, it is library-based: it means that while independent from a specific compiler, the user is bound to the vendor's fine-tuning of the MPI library~\cite{Garain:2015}.
-Although MPI is the de facto standard for parallel programs running on distributed memory systems and few scientific softwares are written in CAF, we think that many scientific applications could benefit from the use of CAF. For this to be possible, studies have to be carried on the impact of CAF on performances and quality of scientific softwares.
-In this paper we focus on the solution of large and sparse linear systems of equations and we propose the migration of the PSBLAS~\cite{PSBLAS} and MLD2P4~\cite{mld-toms} libraries. 
-The first one implements various iterative solvers while the second exploits most of the communications subroutines in PSBLAS to implement multigrid preconditioners. Using the combinations of the two libraries, we can compare performances of real-world problems in MPI and in CAF.
-Few attempts to implement multigrid solvers in CAF have been made, for example in~\cite{Numrich:1998} (in which early versions of CAF and MPI have been used).  In~\cite{Garain:2015} a comparison between MPI3 and CAF is presented for spectral techniques, multigrid techniques and for applications drawn from computational fluid dynamics. It shows that Cray implementations of MPI3 and CAF performances in message passing are comparable (with CAF slightly outperforms MPI3 in some cases), and it points out the advantages of CAF when it comes to ease of implementation.
-In this paper we compare performances of CAF and MPI on problems arising from discretization of 2D and 3D PDEs, using preconditioned iterative methods (also with multigrid preconditioners). We used the GNU compiler and the OpenCoarray library~\cite{PGAS14}, both opensource and easily accessible.
-\section{Fortran Coarray}
-Coarray Fortran extends Fortran language with minimal syntactic constructs, allowing for Single Program Multi Data (SPMD) parallel programming. 
-It follows the Partitioned Global Address Space (PGAS) parallel programming model, which it is an effective alternative combining the advantages of the SPMD programming style for distributed memory systems with the data referencing semantics of shared memory systems. 
-In PGAS model threads share the global address space, each having a portion of space which is local to it. 
-Besides CAF, Unified Parallel C (UPC)~\cite{UPCSpec}, Chapel~\cite{chapel}, X10~\cite{Charles:2005} and SHMEM are all based on the PGAS model.
-With CAF, Fortran users do not need to invoke subroutines from an  external API (as in MPI), nor preprocessing directives (as in OpenMP) to create parallel programs. 
-Since most of the parallel bookkeeping is handle behind the scene by the compiler, CAF achieves a good trade-off between readability and performance and compared to MPI the parallelization is easier to follow, the code is shorter and less complex. We can think, for example, of the burden of passing a non-contiguous array using MPI   or to the fact that with CAF there is no need to write separate code for sending and receiving a message.
-Coarrays are fully supported by Cray and Intel compilers. Although GNU compilers provide only partial coarray support  (only single image),  the open source openCoarrays project provides two coarray transport layers based on MPI and on GASNet~\cite{PGAS14}. 
+Fortran has been the dominant language in High Performance
+Computing and still is a very important player in the field. In past
+couple of decades, the language has changed significantly,  and now 
+supports class abstractions, object-oriented programming, pure
+functions, and coarrays~\cite{Metcalf:2011:MFE}.  
+Coarrays have been part of the Fortran standard since
+Fortran 2008 and provide a syntactic extension of Fortran to
+support parallel programming; in the sequel we will use Fortran
+instead of CAF to highlight the fact that today the parallelization is
+an integral part of the language.
+Following the  Partitioned Global Address Space programming model,
+in Fortran the program is replicated among a certain number of images,
+executing asynchronously. 
+The PGAS model combines elgance  and simplicity, by allowing one-sided
+communications, and potentially reducing synchronization and code 
+complexity. 
+Coarrays are  a language-based approach, meaning that a quality
+compiler implementation can consider both serial and communication
+aspects in optimizing the generated code.
+If the available  compiler also provides support for accelerator
+programming, e.g. by implementing OpenAcc, the programmer can readily
+get a dual benefit form the combined use of PGAS and accelerator
+programming models. 
 
-In CAF the program is replicated a fixed number of times and each replication (called images) executes asynchronously having its own set of data objects. 
-Some variables can be declared as coarrays through the use of coindices (indicated by square brackets) with a syntax very similar to normal Fortran array syntax. 
+
+The Message Passing Interface (MPI) defines a suite of functions for
+communication exchange between processes. MPI  is
+library-based:  it is in principle independent from any specific
+compiler, but the user  is bound to the vendor's fine-tuning of the
+MPI library implementation~\cite{Garain:2015}.
+
+At present  MPI is the de facto standard for parallel programs running
+on distributed memory systems and few scientific softwares are written in
+CAF; it is our belief that many scientific applications could
+benefit from the use of the PGAS model implemented in coarrays; to
+realize the potential, we have to analyze the impact of 
+ Coarrays  on performance and quality of scientific software.
+
+In this paper we focus on the solution of large and sparse linear
+systems of equations and we propose the migration of the
+PSBLAS~\cite{PSBLAS} and MLD2P4~\cite{mld-toms} libraries.
+
+The first one implements various iterative solvers while the second
+exploits most of the communications subroutines in PSBLAS to implement
+multigrid preconditioners. Using the combinations of the two
+libraries, we can compare performances of real-world problems in MPI
+and in CAF.
+
+Few attempts to implement multigrid solvers in CAF have been made, for
+example in~\cite{Numrich:1998} (in which early versions of CAF and MPI
+have been used).  In~\cite{Garain:2015} a comparison between MPI3 and
+CAF is presented for spectral techniques, multigrid techniques and for
+applications drawn from computational fluid dynamics. It shows that
+Cray implementations of MPI3 and CAF performances in message passing
+are comparable (with CAF slightly outperforms MPI3 in some cases), and
+it points out the advantages of CAF when it comes to ease of
+implementation. In this paper we compare performances of CAF and MPI
+on problems arising from discretization of 2D and 3D PDEs, using
+preconditioned iterative methods (also with multigrid
+preconditioners). We used the GNU compiler and the OpenCoarray
+library~\cite{PGAS14}, both opensource and easily accessible.
+
+\section{Fortran Coarrays}
+
+Coarrays extend the original Fortran language with minimal syntactic 
+constructs, allowing for Single Program Multi Data (SPMD) parallel
+programming.  
+It follows the Partitioned Global Address Space (PGAS) parallel
+programming model, which it is an effective alternative combining the
+advantages of the SPMD programming style for distributed memory
+systems with the data referencing semantics of shared memory systems.  
+In the PGAS model, multiple ``images'' participate into  the global
+address space, each one of them having a local portion and access to
+the shared portion of the address space. 
+Other  languages based on the PGAS model include Unified Parallel C
+(UPC)~\cite{UPCSpec},  Chapel~\cite{chapel}, X10~\cite{Charles:2005}
+and SHMEM.
+
+With coarrays, a Fortran programmer needs neither 
+subroutines from an  external API (as in MPI), nor preprocessing
+directives (as in OpenMP) to create a parallel programs.  
+Since most of the parallel bookkeeping is handled behind the scene by
+the compiler, CAF achieves a good trade-off between readability and
+performance;  compared to MPI the parallelization is easier to
+follow, the code is shorter and less complex. We can think, for
+example, of the burden of transferring a non-contiguous portion of an
+array using MPI, a task that is achieved with a single statement, 
+or  that in  CAF there is no need to write explicit and separate code
+for sending and receiving a message. 
+
+Coarrays are supported by Cray, Intel and  GNU 
+compilers; in the GNU compiler the code is translated by emitting
+calls into an API  implemented by the open source openCoarrays
+project, which in turn provides two different transport
+layer implementations  based on MPI and on GASNet~\cite{PGAS14}.  
+
+In the Fortran language the program is replicated a certain number of
+times and each replica, called an image, executes asynchronously
+with its own set of data objects.  
+ Variables  declared as \emph{coarrays} become visible to all images,
+ thereby implementing a locally shared portion of the address space;
+ the syntax uses \emph{coindices} indicated by square brackets, with
+ an appearance very similar to normal array syntax:
 \begin{lstlisting}
 integer ::co_a[*],co_b(n,m)[*]
 \end{lstlisting}
-
-Coarrays can be accessed by the other images, thus enabling data exchange. 
-
+Any statement with coindices indicates access of the variable on a
+(possibly) remote image, thus enabling data exchange:
 \begin{lstlisting}
 co_a[1]=co_a
 \end{lstlisting}
+Dropping a coindex implicitly refers to the local version of the
+variable. 
+Each image is assigned a unique index, through which the programmer
+can control the flow of the execution. Image indices start from 1 and
+can be retrieved using the intrinsic function $this\_image()$;  the
+total number of images can be retrieved using the function
+$num\_images()$. %% The total number of images can be 
+%% different from the total number of processors and it can be decided at
+%% compile, link or runtime depending on the implementation.
+The exact mechanism to determine how many images will be executed
+depends on the compiler's implementation: most implementation use a
+runtime scheme similar to (or directly based on) that of MPI. 
 
-Each image is assigned a unique index, through which the programmer can control the flow of the execution. Image indices start from 1 (not from 0 as MPI process ranks) and can be retrieved using the intrinsic function $this\_image()$. The number of total images can be retrieved using the function $num\_images()$. The total number of images can be different from the total number od processors and it can be decided at compile, link or runtime depending on the implementation. 
+Data transfers in Fortran are asynchronous and non-blocking;
+to prevent  deadlock and race conditions, the programmer has to ensure
+consistency through the use of synchronization statements.
 
-CAF communications are synchronous and non-blocking. 
-To avoid deadlock and race conditions, the programmer has to ensure consistency through the use of synchronization statements.
-The sync all statement corresponds to a global barrier (all images waiting for each tohers) while $sync images$ allows for explicit synchronization of single images. Moreover, with CAF events, an image can use an event post statement to notify another images or it can wait for an event posted by another image before continuing execution. This allows for more sophisticated synchronization strategies.  
+The \verb|SYNC ALL| statement corresponds to a global barrier (all
+images waiting for each other) while \verb|SYNC IMAGES| allows for
+ synchronization restricted within a subset of images.
 
-Other than explicit synchronization, in a CAF program there can be implicit synchronization points. The programmer must be aware of this, because they can lead to a drastic change in performance.
-An example of an implicit synchronization point is allocation or deallocation of an allocatable coarray:
+In the Fortran 2015 language a number of extensions to the original
+coarray language have been introduced; among them are the
+\verb|EVENTS|, which implement an asynchronous notification
+mechanism. 
+An image can use an \verb|EVENT POST| statement to notify another
+image without having to go through a full two-way handshaking; in
+particular, there is no tie to the 
+execution of a matching \verb|EVENT WAIT| by the receiving image .
+This facility allows for \emph{one-sided} synchronization
+strategies.   
 
+Besides  explicit synchronizations, in a Fortran program there can be
+implicit synchronization points the programmer must be aware of, 
+because they can obviously have a significant impact on  performance. 
+An example of an implicit synchronization point is allocation or
+deallocation of a coarray: 
 \begin{lstlisting}
 integer, allocatable :: co_a(:,:)[:]
 allocate(co_a(i,10)[*])
 \end{lstlisting}
-
-Of course, for code between synchronizations, the compiler can use the usual optimization techniques as if only one image is present~\cite{CAF}.
+Code executed between any two synchronizatoin points can be optimized
+by the  compiler using all common techniques and heuristics  as if
+it was a purely serial code~\cite{CAF}. 
 
 \section{PSBLAS and MLD2P4}
 
-Most of scientific and engineering applications require solving a large sparse linear system of equations efficiently on parallel machines.  
-In these cases direct solvers such as Gaussian elimination are usually ineffective and iterative solvers are preferred.
-These techniques produce a sequence of approximate solutions, ideally converging to the real one. Rate of convergence of iterative methods depends upon the condition number of the matrix, hence iterative methods usually involve a transforation of the original matrix into a more well-conditioned one. This transformation is called a preconditioner ~\cite{barrett1994templates}. Among iterative methods, Krylov methods are based on minimizing the residual over a Krylov subspace and are considered among the most important \cite{ipsen1998idea}. The Conjugate Gradient (CG) \cite{shewchuk1994introduction}, the Generalized Minimal Residual (GMRES) \cite{saad1986gmres} and the Biconjugate Gradient (BiCG) \cite{van1992bi} are all Krylov methods. 
-Multigrid methods have also shown promising results in solving linear systems arising from partial differential equations and they have the nice property that they can achieve convergence rates which are, in theory, independent of the mesh size ~\cite{saad2003iterative}.
-Multigrid can be used as stand-alone solvers ~\cite{brandt1977multi} or as preconditioner for a Kylov subspace method ~\cite{bramble1990parallel}.
-PSBLAS is a library of Basic Linear Algebra Subroutineas for parallel sparse applications is designed to handle parallel implementation of iterative solvers for sparse linear systems. It is implemented if object-oriented Fortran 2003. The serial computations are based on the serial sparse BLAS ~\cite{duff2002overview}, while the inter-process massage exchanges are encapsulated in an application layer inspired by the Basic Linear Algebra Communication Subroutines (BLACS) library ~\cite{whaley1997user}. PSBLAS library contains, among the others, subroutines for sparse-matrix-by-dense-matrix multiplication, sparse triangular system solution, dot product, sparse matrix and data distribution preprocessing.
-While addressing a distributed memory execution model the current PSBLAS design does not preclude different implementation pradigms.
-MLD2P4 (Multi-level Domain Decomposition Parallel Preconditioners Package based on PSBLAS) is a package for parallel algebraic multilevel preconditioners. A purely algebraic approach is used and no information about the underlying physical grid is needed to build the preconditioner. MLD2P4 preconditioner are intended to be used in conjuction with the iterative solvers available in the context of PSBLAS. 
-Since in MLD2P4 inter-process data communiations is managed through PSBLAS, writing a CAF version give us dual benefit:
+Many  scientific and engineering applications require solving a
+large sparse linear system of equations efficiently on parallel
+machines;  in these cases direct solvers such as Gaussian elimination
+are often ineffective and iterative solvers are a common alternative.
 
+These techniques produce a sequence of approximate solutions, ideally
+converging to the real one. Rate of convergence of iterative methods
+depends upon the condition number of the matrix, hence iterative
+methods usually involve a transforation of the original matrix into a
+more well-conditioned one. This transformation is called a
+preconditioner~\cite{barrett1994templates}. Krylov methods today the
+most commonly used iterative techniques; they are based on minimizing
+the residual $r=b-Ax$ over a certain linear or affine 
+subspace~\cite{ipsen1998idea}. The Conjugate Gradient 
+(CG)~\cite{shewchuk1994introduction}, the Generalized Minimal Residual  
+(GMRES)~\cite{saad1986gmres} and the Biconjugate Gradient
+(BiCG)~\cite{van1992bi} are popular Krylov method variants.
+
+Multigrid methods have also shown promising results in solving linear
+systems arising from partial differential equations and they have the
+nice property that they can achieve convergence rates which are, in
+theory, independent of the mesh size~\cite{saad2003iterative}. 
+Multigrid can be used as stand-alone solvers~\cite{brandt1977multi}
+or as preconditioner for a Kylov subspace
+method~\cite{bramble1990parallel}.  
+PSBLAS is a library of Basic Linear Algebra Subroutineas for parallel
+sparse applications is designed to handle parallel implementation of
+iterative solvers for sparse linear systems. It is implemented if
+object-oriented Fortran 2003; the serial computations are based on an
+implementation of the serial sparse BLAS originally defined
+in~\cite{duff2002overview}, while the inter-process 
+massage exchanges are encapsulated in an application layer based by
+default on MPI and partially inspired by
+the Basic Linear Algebra Communication Subroutines (BLACS)
+library~\cite{whaley1997user}. PSBLAS library contains, among 
+others, 
+subroutines for sparse-matrix-by-dense-matrix multiplication, sparse
+triangular system solution, dot product, sparse matrix and data
+distribution preprocessing. 
+While addressing a distributed memory execution model the current
+PSBLAS design does not preclude different implementation pradigms. 
+MLD2P4 (Multi-level Domain Decomposition Parallel Preconditioners
+Package based on PSBLAS) is a package for parallel algebraic
+multilevel preconditioners. A purely algebraic approach is used and no
+information about the underlying physical grid is needed to build the
+preconditioner. MLD2P4 preconditioner are intended to be used in
+conjuction with the iterative solvers available in the context of
+PSBLAS.
+
+Since in MLD2P4 inter-process data communiations is managed through
+PSBLAS, writing a CAF version give us dual benefit: 
 \begin{enumerate}
 \item First, we can compare MPI and CAF on Krylov subspace methods and simple preconditioners, usign PSBLAS
 \item Secondly, we can compare MPI and CAF on multilevel preconditioners, since MLD2P4 data communication is actually managed on PSBLAS.
 \end{enumerate}  
-
-Additionally, since both PSBLAS and MLD2P4 are open source, once the CAF version is released CAF programmers will be able to use them inside their scientific application.
+Additionally, since both PSBLAS and MLD2P4 are open source, once the
+CAF version is released CAF programmers will be able to use them
+inside their scientific application. 
 
  
-\section{Implementation}
-We converted the PSBLAS code gradually from MPI to CAF, thus having the two communication strategies coexisting in the same code. 
+\section{Iterative solver Implementation}
+We converted the PSBLAS code gradually from MPI to CAF, thus having
+the two communication strategies coexisting in the same code.  
 We detected three communication patterns to modify:
-
 \begin{enumerate}
 \item The halo exchange
 \item Collective subroutines
 \item Point-to-point communication in data distribution
 \end{enumerate}
-
-In the following, we address the three of them separately.
+In the following, we address the three patterns  separately.
 
 \subsection{Halo Exchange}
 
-In PSBLAS~\cite{PSBLAS}, data distribution is performed keeping in mind the underlying physical problem, such as the discretization mesh of the PDE. 
-Each point in the discretization mesh corresponds to a variable and, consequently, to an index in the coefficient matrix. We say that index $i$ depends upon index $j$ if $a_{ij}\neq0$. 
-In the process of distributing data among processes, the original domain is divided into subdomains. 
-In each subdomain a boundary point is a point depending on points from different domains. An halo point is the one for which there is at least one boundary point in another domain depending upon it. 
-This means that when performing matrix and vector operations (such as a matrix-vector production), halo points will be requested by other processes and the amount of exchanged data is given by the cardinality of the boundary points. 
-Every time this happens we perform a so-called halo exchange operation. We can think of halo exchange as a sparse all-to-all communication (or as an MPI\_ALLTOALLV operation, in MPI jargon).
+The data distribution in  PSBLAS~\cite{PSBLAS} is best described by
+referring to an underlying physical problem, such as a PDE discretized
+on a mesh.
+Each point in the discretization mesh corresponds to a variable and,
+consequently, to an index in the coefficient matrix column space;
+moreover, for each mesh point there is an equation, corresponding to a
+matrix row. We say that index $i$ depends upon index $j$ whenever $a_{ij}\neq0$.  
+In the process of distributing data among processes, the original
+domain is divided into subdomains, with points (and the corresponding
+equations) in the subdomain assigned to a process.  In each subdomain
+a boundary point is a point depending on points from different domains. A halo point
+is one for which there is at least one boundary point in another
+domain depending upon it.  
+This means that when performing e.g. a matrix-vector product, the
+values corresponding to halo points will be requested from other
+processes, with and the amount of exchanged data given by the number 
+of boundary points.   This is a so-called halo exchange 
+operation; we can think of halo exchange as a sparse all-to-all
+communication (\verb|MPI_ALLTOALLV|). It is sparse in the  sense that
+in a good data distribution, each subdomain only interacts with a
+small subset of all other subdomains. 
 \begin{figure}
 \includegraphics[height=1.5in, width=4.65in]{halo2.png}
 \caption{Example of halo exchange on 2 images. }
 %\label{classes}
 \end{figure}
-In order to obtain better performances in PSBLAS halo exchange is actually reimplemented in terms of point-to-point operations. 
-The subroutine performing the exchange takes a list of dependencies as input. The list consists of variable size blocks, one for each of the communication to perform. The list terminates with $-1$ and each block consist of several elements:
+In  PSBLAS the halo exchange is by default reimplemented in terms of
+point-to-point operations; this is because the basic 
+\verb|ALLTOALLV| operation is not commonly optimized for sparse interactions.
+
+The subroutine performing the exchange takes a list of dependencies as
+input, consisting  of variable size blocks, one for each of the
+communication to perform. Each  block contains the remote process with
+which to  exchange data, the number and indices of elements to send,
+and the number and indices of elements to receive.
+%% The ordering of the blocks, determines the sequence in which communications
+%% take place, is defined through an internal algorithm. 
+For the MPI version we can choose between different implementations; 
+the halo\_exchange can thus happen through a single call to
+MPI\_ALLTOALLV, by using send and receives communications in
+synchronized pairs, or it can be split between 
+two separate \emph{send} and \emph{receive} calls. In the latter case
+the programmer needs to ensure that for each \emph{send} invocation
+there is a matching \emph{receive}; this is very general, but requires
+some sort of explicit or implicit buffering of the send data. 
+If the two steps are concatenated in the same call, it is possible to
+use minimal memory buffer space and maximize performance by employing 
+\verb|mpi_irecv| calls.
+The exchange then has the following logic flow: 
 \begin{enumerate}
-\item The first entry identifies the process to which exchange data.
-\item The number of elements to receive
-\item The local indices of the elements to receive
-\item The number of elements to send
-\item The local elements to send
-\end{enumerate}
-The order of the blocks, determining the order in which communications take place, is defined through an internal algorithm.
-For the MPI version we can choose between different strategies by setting a suitable flag as an input variable. The halo\_exchange can thus happen through a call to MPI\_ALLTOALLV, by using send and receives communications in synchronized pairs, by performing only a send or a receive (in this case, the code needs to complete the communication by calling the same subroutine with the complementary communication in a later stage) or by using mpi\_irecv and mpi\_send. 
-The latter choice is the standard one, since it leads to the best results in terms of performance. In this case data exchange actually takes place through the use of two buffers (snd\_buf and rcv\_buf) according to the following flow:
-\begin{enumerate}
-\item pack data into the snd\_buffer
-\item call the non-blocking mpi\_irecv using rcv\_buffer as output
-\item complete the exchange calling blocking mpi\_snd using snd\_buffer as input
-\item upack data from the rcv\_buffer
+  \item Post non-blocking receives;
+  \item Pack data into buffers and send; 
+  \item Wait for the receive operations to complete; 
+  \item Unpack data from the receive buffers. 
 \end{enumerate} 
-
-When rewriting the halo exchange subroutine in CAF, we need to choose if we want to perform the exchange operation using GET or PUT operations. 
-Let's assume that we need to pass a scalar value, stored on the variable $a$ from image $1$ to image $2$. Since communications in CAF are one-sided, this can be done in two ways:
-
+When rewriting the halo exchange subroutine in CAF, we need to choose
+if we want to perform the exchange operation using GET or PUT
+operations.  
+Let's assume that we need to pass a scalar value, stored on the
+variable $a$ from image $1$ to image $2$. Since communications in CAF
+are one-sided, this can be done in two ways: 
 \lstset{language=Fortran} 
-
 \begin{lstlisting}
 if (this_image()==1) a[2] = a
 \end{lstlisting}
@@ -177,12 +361,23 @@ or
 \begin{lstlisting}
 if (this_image()==2) a = a[1]
 \end{lstlisting}
+In the first case image $1$ performs a PUT operation; in the second
+case, image $2$ performs a GET operation. We have implemented both
+cases in PSBLAS, but preliminary tests  show that the PUT version
+generally leads to a slightly smaller execution time.
+Both versions require a coarray buffer. In the GET version it is
+possible to incorporate the data exchange in the operation of packing
+the sending data: in this case no other buffer is needed. For the PUT
+version, it is still necessary to provide a separate receive buffer.
 
-In the first case image $1$ performs a PUT operation; in the second case, image $2$ performs a GET operation. We implemented both cases in PSBLAS, but preliminary tests  show that PUT leads to a slightly smaller execution time.
-Both versions require a coarray buffer. In the GET version it is possible to incorporate the data exchange in the operation of packing the sending data: in this case no other buffer is needed. For the PUT version instead, the rcv\_buf is still present.
-A key factor is the management of  allocation of coarrays in the code. Since in CAF allocate and deallocate statements are implicit synchronization barriers, for the sake of performance they should be avoided unless strictly necessary.
-For this reason in PSBLAS code we declared the coarray buffer with the save attribute and we reallocate it only when the actual amount of data to exchange does not fit the current size:
-
+A key factor is the management of  allocation of coarrays in the
+code. Since in CAF allocate and deallocate statements are implicit
+synchronization barriers, they are significantly more expensive than
+normal allocations, and therefore  they should be
+avoided as much as possible.  Thus we declare communication
+buffers with the \verb|save| attribute to enable reuse, and we only
+need to reallocate occasionally when the size of the requested
+exchange does not fit into the available space. 
 \lstset{language=Fortran} 
 \begin{lstlisting}
   if (psb_size(buffer) < xchg%max_buffer_size) then
@@ -197,23 +392,41 @@ For this reason in PSBLAS code we declared the coarray buffer with the save attr
     end if
   end if
 \end{lstlisting}
+ With MPI the buffers are local, and since in most systems allocation
+ is cheap we normally release the buffers to save memor.
+Before showing performance results for  the halo exchange, we 
+make a comparison between MPI and CAF for the halo exchange in terms
+of impact on software quality.  
+The interface for the halo exchange in psblas is \verb|psi_swapdata|;
+this interface requires different implementations for the various data
+types  in PSBLAS (integer, real and complex), and  for both single
+vectors and multivectors, i.e. sets of related vectors stored as
+``tall and skinny'' 2D matrices. Any benefits from code simplification
+are thus accrued multiple times.
 
-Note that with MPI, the opposite is true: we deallocate the buffers as soon as we can, in order to save run-time memory.
-Before performance results are shown for the halo exchange, we can make a comparison between MPI and CAF for the halo exchange in terms of impact on software quality.
-The interface for the halo exchange in psblas is psi\_swapdata. This interface requires 5 implementations for each of the available datatypes in PSBLAS (integer, real, double precision, complex and double precision complex). Each of them needs to be implemented for the the real vector, the real matrix and the two derived types defined in PSBLAS psb\_X\_vect and psb\_X\_multivect. A second interface, psi\_swaptran performs a transpose halo exchange. As a consequence, we need 40 implementations of the halo exchange: these are all very similar with some minor modifications. It is clear that any impact on the code, although relatively small on the single implementation, has to be multiply by 40. 
-Keeping this in mind, we detected two differences between the MPI and the CAF version:
-
+Comparing the  MPI and the CAF versions we see that there are benefits
+in : 
 \begin{enumerate}
-\item number of input variables: the MPI version requires 12 input variables, while the CAF version requires 8 input variables
-\item the number of lines of code for the single implementation is 185 for MPI and 116 for CAF 
+\item Number of input variables: the MPI version requires 12 input
+  variables, while the CAF version requires 8 input variables 
+\item Number of lines of code for the single implementation is 185 for
+  MPI and 116 for CAF;  
 \end{enumerate}
-
-Less input parameters results in a more clear interface, and we get a significant reduction in the number of lines of the code (regarding only the halo exchange).
+Note that many of the lines of code are actually for testing error
+conditions and other general tasks in common to the two versions, so
+the impact on the strict communication part of the code is even larger
+than appears at first glance. 
   
 \subsection{Collective Subroutines and Point-to-point in Data Distribution}
 
-Here we take into account all the subroutines performing collective communications, in which all images take part in the communication. While rewriting the halo exchange using CAF leads to a reduction in the number of lines in the code, in this case we can expect an increasing in the length of the code. This is because MPI provides an interface for most of the collectives we may need in solving a sparse linear system in parallel. For CAF collective subroutines are reduced in number; they are:
-
+Here we take into account all the subroutines performing collective
+communications, in which all images take part in the
+communication. While rewriting the halo exchange using CAF leads to a
+reduction in the number of lines in the code, in this case we can
+expect an increasing in the length of the code. This is because MPI
+provides an interface for most of the collectives we may need in
+solving a sparse linear system in parallel.
+The current language standard defines the following collectives:
 \begin{enumerate}
 \item co\_broadcast
 \item co\_max
@@ -221,11 +434,14 @@ Here we take into account all the subroutines performing collective communicatio
 \item co\_sum
 \item co\_reduce
 \end{enumerate}
-
-They involve synchronization within them, but not at the start or at the end.  
-With CAF, we need to write from scratch some of the collective subroutines we need.
-We do this in the psb\_caf\_mod. In this module, we have the implementations for the interfaces caf\_scatterv, caf\_gatherv, caf\_allgatherv, caf\_allgatherv caf\_gather, caf\_alltoallv and caf\_alltoall. 
-As an example, the code for the caf\_alltoall has been provided. 
+Some of the collectives provided by MPI  we have investigated
+reimplementing ourselves; in what follows we are typically emphasizing
+simplicity over efficiency, a proper study of further implementation
+techniques will be the subject of future work. In particular 
+we have the implementations for the interfaces caf\_scatterv,
+caf\_gatherv, caf\_allgatherv, caf\_allgatherv caf\_gather,
+caf\_alltoallv and caf\_alltoall.  
+As an example, the code for the caf\_alltoall looks like:
 \lstset{language=Fortran} 
 {\small
 \begin{lstlisting}
@@ -272,13 +488,12 @@ As an example, the code for the caf\_alltoall has been provided.
     if (allocated(buffer)) deallocate(buffer)
   end subroutine caf_alltoall
 \end{lstlisting}}
-For what it concerns the reduce operations, we show a comparison between CAF and MPI based on the code for the reduce operation based on the norm2. 
-First, the code for the MPI version:
+For what it concerns the reduction operations, the \verb|co_reduce| is
+already part of the standard, and here the difference in code is
+obvious. For the  MPI version we have:
 \begin{center}
 {\small
 \begin{lstlisting}
-
-
 call psb_realloc(size(dat),dat_,iinfo)
 dat_ = dat
 if (iinfo == psb_success_) &
@@ -287,23 +502,36 @@ if (iinfo == psb_success_) &
 
 \end{lstlisting}}
 \end{center}
-
-And the code the CAF version: 
-
+whereas for  the CAF version we have a single statement: 
 \begin{center}
 {\small
 \begin{lstlisting}
-
 call co_reduce(co_dat_,caf_dnrm2)
-
 \end{lstlisting}}
 \end{center}
-In this case the CAF syntax is more compact and there is no need to use the extra euxiliary variable dat\_.
-Finally, we modified the psb\_matdist subroutines, an utility subroutine that uses point-to-point communications to distribute a matrix among processors according user defined data distribution. In this case, for both MPI and CAF we are using one-sided communications. In the case of CAF, to ensure performance optimizations, we used events to ensure synchronization among images. 
+The CAF syntax is more compact and does not differentiate between
+input and output variables, which suits perfectly our usage and
+eliminates the need for  the extra euxiliary variable dat\_. 
+
+%% Finally, we modified the psb\_matdist subroutines, an utility
+%% subroutine that uses point-to-point communications to distribute a
+%% matrix among processors according user defined data distribution. In
+%% this case, for both MPI and CAF we are using one-sided
+%% communications. In the case of CAF, to ensure performance
+%% optimizations, we used events to ensure synchronization among
+%% images.
+
+
 \section{Results}
-CAF and MPI versions of PSBLAS and MLD2P4 have been tested on matrices generated by 2D and 3D PDEs.
-The experiments were carried out on the Yoda linux cluster, operated by the Naples Branch of the CNR Institute for High-Performace Computing and Networking. Its compute nodes consist of 2 Intel Sandy Bridge E5-2670 8-core processors and 192 GB of RAM, connected via Infiniband.
-Both PSBLAS, MLD2P4 and OpenCoarrays-1.9 have been compiled on the top of MPICH-3.2 and GNU 7.1.
+CAF and MPI versions of PSBLAS and MLD2P4 have been tested on matrices
+generated by 2D and 3D PDEs. 
+The experiments were carried out on the Yoda linux cluster, operated
+by the Naples Branch of the CNR Institute for High-Performace
+Computing and Networking. Its compute nodes consist of 2 Intel Sandy
+Bridge E5-2670 8-core processors and 192 GB of RAM, connected via
+Infiniband. 
+Both PSBLAS, MLD2P4 and OpenCoarrays-1.9 have been compiled on the top
+of MPICH-3.2 and GNU 7.1. 
 
 In PSBLAS and MLD2P4 it is possible to create the matrix corresponding to the PDE $
 -a_1\frac{\mathrm d}{\mathrm d x \mathrm d x} \left(u \right) -a_2\frac{\mathrm d}{\mathrm d y \mathrm d y} \left(u \right) +b_1\frac{\mathrm d}{\mathrm d x} \left(u \right) +b_2\frac{\mathrm d}{\mathrm d y} \left(u \right) +cu = f
