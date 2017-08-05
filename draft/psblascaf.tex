@@ -45,9 +45,10 @@ CAF, many scientific applications could benefit from the use of CAF.
 We present the migration from MPI to CAF of the libraries PSBLAS  and
 MLD2P4 for the solution of large systems of equations using iterative
 methods and preconditioners.  
-In this paper we describe the best-usage strategies implemented in
-PSBLAS and MLD2P4 and we show some performance results obtained on
-linear systems arising from discretization of 2D and 3D PDEs.   
+In this paper we describe some investigations for implementing the
+necessary communication steps in PSBLAS and MLD2P4 and provide
+performance results obtained on linear systems arising from
+discretization of 2D and 3D PDEs.    
 \end{abstract}
 
 \begin{keyword}
@@ -302,10 +303,9 @@ matrix row. We say that index $i$ depends upon index $j$ whenever $a_{ij}\neq0$.
 In the process of distributing data among processes, the original
 domain is divided into subdomains, with points (and the corresponding
 equations) in the subdomain assigned to a process.  In each subdomain
-a boundary point is a point depending on points from different domains. A halo point
-is one for which there is at least one boundary point in another
-domain depending upon it.  
-This means that when performing e.g. a matrix-vector product, the
+a boundary point is a point depending on points from different
+domains, which are called halo points. 
+When performing e.g. a matrix-vector product, the
 values corresponding to halo points will be requested from other
 processes, with and the amount of exchanged data given by the number 
 of boundary points.   This is a so-called halo exchange 
@@ -320,7 +320,9 @@ small subset of all other subdomains.
 \end{figure}
 In  PSBLAS the halo exchange is by default reimplemented in terms of
 point-to-point operations; this is because the basic 
-\verb|ALLTOALLV| operation is not commonly optimized for sparse interactions.
+\verb|ALLTOALLV| operation is not commonly optimized for sparse
+interactions.
+
 
 The subroutine performing the exchange takes a list of dependencies as
 input, consisting  of variable size blocks, one for each of the
@@ -347,6 +349,24 @@ The exchange then has the following logic flow:
   \item Wait for the receive operations to complete; 
   \item Unpack data from the receive buffers. 
 \end{enumerate} 
+For structured grids partitioned along coordinate planes, the halo
+exchange could be implemented with simple remote coarray accesses. The
+situation is much more complicated if, as in PSBLAS, we want to handle
+unstructured meshes and arbitrary domain partitionings. In this  case
+the only way to proceed is to have matched lists of entries to be
+retrieved and/or sent; a direct access of the remote entries could be
+implementeed with indirect addressing, with a statement like
+\lstset{language=Fortran} 
+{\small
+\begin{lstlisting}
+x(rcv_idxs(1:nrcv(img))) =  x(rcv_idxs(1:nrcv(img)))[img]
+\end{lstlisting}}
+This is perfectly legal, but the implication is that the accesses on
+the remote image require the indices to travel, and the resulting
+efficiency would be dubious. The first approach we took then was to 
+have a more ``cooperative'' handling of data packing between the
+various processes, with the buffers declared as coarrays. 
+
 When rewriting the halo exchange subroutine in CAF, we need to choose
 if we want to perform the exchange operation using GET or PUT
 operations.  
@@ -624,17 +644,41 @@ Finally, we show results for the 3D problem, using the multilevel preconditioner
   
 \section{Conclusions}
 
-We successfully migrated PSBLAS library from MPI to CAF. Since MLD2P4 communication is based on the PSBLAS framework, most of MLD2P4 preconditioners can exploit underlying CAF communication with little effort. We point out that in the migration from MPI to CAF we retained as much as the original code and structure that we could. While this can lead to CAF code which is not as clear and readable as it would be if the original software was thought and written in CAF from the beginning, we think that the previous examples show the capability of CAF to express parallelism in a simpler way than MPI. In all cases, CAF code is shorter, clearer and easier to read. However, the CAF programmer need to provide an interface for most of MPI collective subroutines, which can increase the lenght of the code. 
+We successfully obtained a first migration of the  PSBLAS library from
+MPI to CAF. Since MLD2P4 
+communication is based on the PSBLAS framework, most of MLD2P4
+preconditioners can exploit underlying CAF communication with little
+effort. We point out that in the migration from MPI to CAF we retained
+as much as the original code and structure that we could. While this
+can lead to CAF code which is not as clear and readable as it would be
+if the original software was thought and written in CAF from the
+beginning, we think that the previous examples show the capability of
+CAF to express parallelism in a simpler way than MPI. In all cases,
+CAF code is shorter, clearer and easier to read. However, the CAF
+programmer need to provide an interface for most of MPI collective
+subroutines, which can increase the lenght of the code.  
 
-Performance is a key factor, so we tested both the MPI and CAF versions on problems arising from discretization of 2D and 3D PDEs. Neither CAF nor MPI version has shown a clear superiority in terms of performance, with execution time almost identical in the two cases. So, the migration from MPI to CAF did not lead to a loss of performance.
-Additionally, we provided few examples of how CAF programmer choices can affect performance (for example: "get" versus "put" for one-sided communication, events versus $sync images$ for synchronization, clever coarrays allocation).
+We tested both the MPI and CAF versions on problems arising from
+discretization of 2D and 3D PDEs. Neither CAF nor MPI version has
+shown a clear superiority in terms of performance, with execution time
+almost identical in the two cases.  The initial migration from MPI to CAF
+was achieved without  a loss of performance; however this is only the
+first step. In future work we plan to explore in detail possible
+alternative strategies for remote indirect addressing, which will
+likely include close interaction with the development of the compiler
+and of the OpenCoarrays transport layer.
+Additionally, we provided few examples of how CAF programmer choices
+can affect performance (for example: "get" versus "put" for one-sided
+communication, events versus $sync images$ for synchronization, clever
+coarrays allocation). 
 
 \section{Acknowledgments} 
-This work has received funding from the European Union's Horizon 2020 Research
+This work has been partially funded  from the European Union's Horizon 2020 Research
 and Innovation Programme under Grant Agreement No.~676629
 (Project EoCoE).
 % (call H2020-EINFRA-2015-1, project ID: 676629, \url{http://www.eocoe.eu}).
-The authors wish to thank prof. Pasqua D'Ambra (CNR, Napoli, Italy), for helping us running tests using the two versions of the software.
+The authors wish to thank Dr. Pasqua D'Ambra (CNR, Napoli, Italy),
+for her help in running the experimental tests.
  
 \bibliographystyle{unsrt}
 \bibliography{psblas-caf}
