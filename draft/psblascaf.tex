@@ -40,7 +40,7 @@ Coarrays have been part of the Fortran standard since
 Fortran 2008 and provide a syntactic extension of Fortran to
 support parallel programming, often called Coarray Fortran (CAF). 
 Although MPI is the de facto standard for parallel programs running on
-distributed memory systems and few scientific softwares are written in
+distributed memory systems and little  scientific software is  written in
 CAF, many scientific applications could benefit from the use of CAF.  
 We present the migration from MPI to CAF of the libraries PSBLAS  and
 MLD2P4 for the solution of large systems of equations using iterative
@@ -429,8 +429,8 @@ in :
 \item Number of lines of code for the single implementation is 185 for
   MPI and 116 for CAF;  
 \end{enumerate}
-Note that many of the lines of code are actually for testing error
-conditions and other general tasks in common to the two versions, so
+Note that many of the lines of code are actually devoted to  tests for error
+conditions and other general tasks,  in common among the two versions;
 the impact on the strict communication part of the code is even larger
 than appears at first glance. 
   
@@ -653,14 +653,11 @@ discretization of 2D and 3D PDEs. Neither CAF nor MPI version has
 shown a clear superiority in terms of performance, with execution time
 almost identical in the two cases.  The initial migration from MPI to CAF
 was achieved without  a loss of performance; however this is only the
-first step. In future work we plan to explore in detail possible
-alternative strategies for remote indirect addressing, which will
-likely include close interaction with the development of the compiler
-and of the OpenCoarrays transport layer.
-Additionally, we provided few examples of how CAF programmer choices
-can affect performance (for example: "get" versus "put" for one-sided
-communication, events versus $sync images$ for synchronization, clever
-coarrays allocation). 
+first step. In future work we plan to explore in further detail possible
+alternative strategies for critical operations, such as  remote
+indirect addressing, usage of \emph{get} versus \emph{put} strategis
+for one sided communications, and a thorough study of the \verb|EVENT|
+facility performance. 
 
 \section{Acknowledgments} 
 This work has been partially funded  from the European Union's Horizon 2020 Research
