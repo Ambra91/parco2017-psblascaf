@@ -83,7 +83,7 @@ compiler implementation can consider both serial and communication
 aspects in optimizing the generated code.
 If the available  compiler also provides support for accelerator
 programming, e.g. by implementing OpenAcc, the programmer can readily
-get a dual benefit form the combined use of PGAS and accelerator
+get a dual benefit from the combined use of PGAS and accelerator
 programming models. 
 
 
@@ -140,12 +140,8 @@ Other  languages based on the PGAS model include Unified Parallel C
 (UPC)~\cite{UPCSpec},  Chapel~\cite{chapel}, X10~\cite{Charles:2005}
 and SHMEM.
 
-With coarrays, a Fortran programmer needs neither 
-subroutines from an  external API (as in MPI), nor preprocessing
-directives (as in OpenMP) to create a parallel programs.  
-Since most of the parallel bookkeeping is handled behind the scene by
-the compiler, CAF achieves a good trade-off between readability and
-performance;  compared to MPI the parallelization is easier to
+With coarrays most of the parallel bookkeeping is handled behind the scene by
+the compiler;  compared to MPI the parallelization is easier to
 follow, the code is shorter and less complex. We can think, for
 example, of the burden of transferring a non-contiguous portion of an
 array using MPI, a task that is achieved with a single statement, 
@@ -165,14 +161,16 @@ with its own set of data objects.
  thereby implementing a locally shared portion of the address space;
  the syntax uses \emph{coindices} indicated by square brackets, with
  an appearance very similar to normal array syntax:
+{\small
 \begin{lstlisting}
 integer ::co_a[*],co_b(n,m)[*]
-\end{lstlisting}
+\end{lstlisting}}
 Any statement with coindices indicates access of the variable on a
 (possibly) remote image, thus enabling data exchange:
+{\small
 \begin{lstlisting}
 co_a[1]=co_a
-\end{lstlisting}
+\end{lstlisting}}
 Dropping a coindex implicitly refers to the local version of the
 variable. 
 Each image is assigned a unique index, through which the programmer
@@ -210,10 +208,11 @@ implicit synchronization points the programmer must be aware of,
 because they can obviously have a significant impact on  performance. 
 An example of an implicit synchronization point is allocation or
 deallocation of a coarray: 
+{\small
 \begin{lstlisting}
 integer, allocatable :: co_a(:,:)[:]
 allocate(co_a(i,10)[*])
-\end{lstlisting}
+\end{lstlisting}}
 Code executed between any two synchronizatoin points can be optimized
 by the  compiler using all common techniques and heuristics  as if
 it was a purely serial code~\cite{CAF}. 
@@ -270,11 +269,7 @@ conjuction with the iterative solvers available in the context of
 PSBLAS.
 
 Since in MLD2P4 inter-process data communiations is managed through
-PSBLAS, writing a CAF version give us dual benefit: 
-\begin{enumerate}
-\item First, we can compare MPI and CAF on Krylov subspace methods and simple preconditioners, usign PSBLAS
-\item Secondly, we can compare MPI and CAF on multilevel preconditioners, since MLD2P4 data communication is actually managed on PSBLAS.
-\end{enumerate}  
+PSBLAS, writing a CAF version give us dual benefit: first, we can compare MPI and CAF on Krylov subspace methods and simple preconditioners, using PSBLAS; secondly, we can compare MPI and CAF on multilevel preconditioners, since MLD2P4 data communication is actually managed on PSBLAS. 
 Additionally, since both PSBLAS and MLD2P4 are open source, once the
 CAF version is released CAF programmers will be able to use them
 inside their scientific application. 
@@ -374,13 +369,15 @@ Let's assume that we need to pass a scalar value, stored on the
 variable $a$ from image $1$ to image $2$. Since communications in CAF
 are one-sided, this can be done in two ways: 
 \lstset{language=Fortran} 
+{\small
 \begin{lstlisting}
 if (this_image()==1) a[2] = a
-\end{lstlisting}
+\end{lstlisting}}
 or
+{\small
 \begin{lstlisting}
 if (this_image()==2) a = a[1]
-\end{lstlisting}
+\end{lstlisting}}
 In the first case image $1$ performs a PUT operation; in the second
 case, image $2$ performs a GET operation. We have implemented both
 cases in PSBLAS, but preliminary tests  show that the PUT version
@@ -446,14 +443,7 @@ reduction in the number of lines in the code, in this case we can
 expect an increasing in the length of the code. This is because MPI
 provides an interface for most of the collectives we may need in
 solving a sparse linear system in parallel.
-The current language standard defines the following collectives:
-\begin{enumerate}
-\item co\_broadcast
-\item co\_max
-\item co\_min
-\item co\_sum
-\item co\_reduce
-\end{enumerate}
+The current language standard defines the following collectives: co\_broadcast, co\_max, co\_min, co\_sum, co\_reduce
 Some of the collectives provided by MPI  we have investigated
 reimplementing ourselves; in what follows we are typically emphasizing
 simplicity over efficiency, a proper study of further implementation
