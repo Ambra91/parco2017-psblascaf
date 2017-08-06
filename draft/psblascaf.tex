@@ -355,9 +355,8 @@ implementeed with indirect addressing, with a statement like
 \begin{lstlisting}
 x(rcv_idxs(1:nrcv(img))) =  x(rcv_idxs(1:nrcv(img)))[img]
 \end{lstlisting}}
-This is perfectly legal, but the implication is that the accesses on
-the remote image require the indices to travel, and the resulting
-efficiency would be dubious. The first approach we took then was to 
+This is  legal, but an efficient  compiler implementation tends to be
+difficult.  The first approach we took then was to 
 have a more ``cooperative'' handling of data packing between the
 various processes, with the buffers declared as coarrays. 
 
