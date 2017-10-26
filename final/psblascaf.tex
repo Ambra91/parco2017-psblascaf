@@ -1,4 +1,3 @@
-
 \documentclass{IOS-Book-Article}
 
 \usepackage{mathptmx}
@@ -32,8 +31,8 @@
 and
 \author[B]{\fnms{Salvatore} \snm{Filippone}}
 
-\address[A]{University of Rome Tor Vergata}
-\address[B]{Cranfield University}
+\address[A]{University of Rome Tor Vergata, Italy}
+\address[B]{Cranfield University, UK}
 
 \begin{abstract}
 Coarrays have been part of the Fortran standard since
@@ -45,7 +44,7 @@ CAF, many scientific applications could benefit from the use of CAF.
 We present the migration from MPI to CAF of the libraries PSBLAS  and
 MLD2P4 for the solution of large systems of equations using iterative
 methods and preconditioners.  
-In this paper we describe some investigations for implementing the
+In this paper, we describe some investigations for implementing the
 necessary communication steps in PSBLAS and MLD2P4 and provide
 performance results obtained on linear systems arising from
 discretization of 2D and 3D PDEs.    
@@ -76,75 +75,80 @@ an integral part of the language.
 Following the  Partitioned Global Address Space programming model,
 in Fortran the program is replicated among a certain number of images,
 executing asynchronously. 
-The PGAS model combines elgance  and simplicity, by allowing one-sided
-communications, and potentially reducing synchronization and code 
+The PGAS model combines elegance and simplicity, by allowing one-sided
+communications and potentially reducing synchronization and code 
 complexity. 
 Coarrays are  a language-based approach, meaning that a quality
 compiler implementation can consider both serial and communication
 aspects in optimizing the generated code.
 If the available  compiler also provides support for accelerator
-programming, e.g. by implementing OpenAcc, the programmer can readily
+programming, e.g., by implementing OpenAcc, the programmer can readily
 get a dual benefit from the combined use of PGAS and accelerator
 programming models. 
-
 
 The Message Passing Interface (MPI) defines a suite of functions for
 communication exchange between processes. MPI  is
 library-based:  it is in principle independent from any specific
 compiler, but the user  is bound to the vendor's fine-tuning of the
 MPI library implementation~\cite{Garain:2015}.
-
+%
 At present  MPI is the de facto standard for parallel programs running
 on distributed memory systems and few scientific softwares are written in
 CAF; it is our belief that many scientific applications could
 benefit from the use of the PGAS model implemented in coarrays; to
 realize the potential, we have to analyze the impact of 
- Coarrays  on performance and quality of scientific software.
+Coarrays  on performance and quality of scientific software.
 
-In this paper we focus on the solution of large and sparse linear
-systems of equations and we propose the migration of the
+In this paper, we focus on the solution of large and sparse linear
+systems of equations and propose the migration from MPI to CAF of the
 PSBLAS~\cite{PSBLAS} and MLD2P4~\cite{mld-toms} libraries.
-
-The first one implements various iterative solvers while the second
+%
+The first one implements various iterative solvers, while the second
 exploits most of the communications subroutines in PSBLAS to implement
 multigrid preconditioners. Using the combinations of the two
 libraries, we can compare performances of real-world problems in MPI
 and in CAF.
 
-Few attempts to implement multigrid solvers in CAF have been made, for
+Few attempts to implement multigrid solvers in CAF have been made so far, for
 example in~\cite{Numrich:1998} (in which early versions of CAF and MPI
 have been used).  In~\cite{Garain:2015} a comparison between MPI3 and
-CAF is presented for spectral techniques, multigrid techniques and for
-applications drawn from computational fluid dynamics. It shows that
-Cray implementations of MPI3 and CAF performances in message passing
-are comparable (with CAF slightly outperforms MPI3 in some cases), and
-it points out the advantages of CAF when it comes to ease of
-implementation. In this paper we compare performances of CAF and MPI
+CAF is presented for spectral and multigrid techniques and for
+applications drawn from computational fluid dynamics. The authors show that the performances of 
+Cray implementations of MPI3 and CAF in message passing 
+are comparable (with CAF slightly outperforming MPI3 in some cases), and
+they point out the advantages of CAF when it comes to ease of
+implementation. In this paper we compare the performances of CAF and MPI
 on problems arising from discretization of 2D and 3D PDEs, using
 preconditioned iterative methods (also with multigrid
-preconditioners). We used the GNU compiler and the OpenCoarray
-library~\cite{PGAS14}, both opensource and easily accessible.
+preconditioners). We use the GNU compiler and the OpenCoarray
+library~\cite{PGAS14}, which are both open source. %and easily accessible.
 
-\section{Fortran Coarrays}
+The rest of the paper is organized as follows. 
+In Sections~\ref{sec:CAF} and~\ref{sec:PSBLAS} we provide an overview of Fortran Coarrays 
+and PSBLAS and MLD2P4 libraries. 
+In Section~\ref{sec:iterative} we present the migration to CAF of the iterative solver implementation, 
+focusing on the communication patterns and discuss experimental results in Section~\ref{sec:results}. 
+We conclude in Section~\ref{sec:concl}
+
+\section{Fortran Coarrays} \label{sec:CAF}
 
 Coarrays extend the original Fortran language with minimal syntactic 
 constructs, allowing for Single Program Multi Data (SPMD) parallel
 programming.  
-It follows the Partitioned Global Address Space (PGAS) parallel
-programming model, which it is an effective alternative combining the
+They follow the Partitioned Global Address Space (PGAS) parallel
+programming model, which is an effective alternative combining the
 advantages of the SPMD programming style for distributed memory
 systems with the data referencing semantics of shared memory systems.  
 In the PGAS model, multiple ``images'' participate into  the global
 address space, each one of them having a local portion and access to
 the shared portion of the address space. 
-Other  languages based on the PGAS model include Unified Parallel C
-(UPC)~\cite{UPCSpec},  Chapel~\cite{chapel}, X10~\cite{Charles:2005}
-and SHMEM.
+Other languages based on the PGAS model include Unified Parallel C
+(UPC)~\cite{UPCSpec},  Chapel~\cite{chapel}, X10~\cite{Charles:2005} and OpenSHMEM~\cite{Chapman:2010}.
 
 With coarrays most of the parallel bookkeeping is handled behind the scene by
-the compiler;  compared to MPI the parallelization is easier to
+the compiler;  compared to MPI, the parallelization is easier to
 follow, the code is shorter and less complex. We can think, for
-example, of the burden of transferring a non-contiguous portion of an
+example, of the burden for transferring a non-contiguous portion of an
 array using MPI, a task that is achieved with a single statement, 
 or  that in  CAF there is no need to write explicit and separate code
 for sending and receiving a message. 
@@ -188,9 +192,9 @@ runtime scheme similar to (or directly based on) that of MPI.
 Data transfers in Fortran are asynchronous and non-blocking;
 to prevent  deadlock and race conditions, the programmer has to ensure
 consistency through the use of synchronization statements.
-
+%
 The \verb|SYNC ALL| statement corresponds to a global barrier (all
-images waiting for each other) while \verb|SYNC IMAGES| allows for
+images waiting for each other), while \verb|SYNC IMAGES| allows for
  synchronization restricted within a subset of images.
 
 In the Fortran 2015 language a number of extensions to the original
@@ -214,11 +218,11 @@ deallocation of a coarray:
 integer, allocatable :: co_a(:,:)[:]
 allocate(co_a(i,10)[*])
 \end{lstlisting}}
-Code executed between any two synchronizatoin points can be optimized
+Code executed between any two synchronization points can be optimized
 by the  compiler using all common techniques and heuristics  as if
 it was a purely serial code~\cite{CAF}. 
 
-\section{PSBLAS and MLD2P4}
+\section{PSBLAS and MLD2P4} \label{sec:PSBLAS}
 
 Many  scientific and engineering applications require solving a
 large sparse linear system of equations efficiently on parallel
@@ -228,60 +232,63 @@ are often ineffective and iterative solvers are a common alternative.
 These techniques produce a sequence of approximate solutions, ideally
 converging to the real one. Rate of convergence of iterative methods
 depends upon the condition number of the matrix, hence iterative
-methods usually involve a transforation of the original matrix into a
+methods usually involve a transformation of the original matrix into a
 more well-conditioned one. This transformation is called a
-preconditioner~\cite{barrett1994templates}. Krylov methods today the
-most commonly used iterative techniques; they are based on minimizing
+preconditioner~\cite{barrett1994templates}. Nowadays Krylov methods represent the
+most commonly used iterative technique; they are based on minimizing
 the residual $r=b-Ax$ over a certain linear or affine 
 subspace~\cite{ipsen1998idea}. The Conjugate Gradient 
 (CG)~\cite{shewchuk1994introduction}, the Generalized Minimal Residual  
-(GMRES)~\cite{saad1986gmres} and the Biconjugate Gradient
+(GMRES)~\cite{saad1986gmres}, and the Biconjugate Gradient
 (BiCG)~\cite{van1992bi} are popular Krylov method variants.
 
 Multigrid methods have also shown promising results in solving linear
 systems arising from partial differential equations and they have the
-nice property that they can achieve convergence rates which are, in
+nice property to achieve convergence rates which are, in
 theory, independent of the mesh size~\cite{saad2003iterative}. 
 Multigrid can be used as stand-alone solvers~\cite{brandt1977multi}
-or as preconditioner for a Kylov subspace
-method~\cite{bramble1990parallel}.  
-PSBLAS is a library of Basic Linear Algebra Subroutineas for parallel
-sparse applications is designed to handle parallel implementation of
-iterative solvers for sparse linear systems. It is implemented if
+or as preconditioner for a Krylov subspace method~\cite{bramble1990parallel}.  
+
+PSBLAS~\cite{PSBLAS} is a library of Basic Linear Algebra Subroutines (BLAS) for parallel
+sparse applications and is designed to handle parallel implementation of
+iterative solvers for sparse linear systems. It is implemented in 
 object-oriented Fortran 2003; the serial computations are based on an
 implementation of the serial sparse BLAS originally defined
 in~\cite{duff2002overview}, while the inter-process 
-massage exchanges are encapsulated in an application layer based by
-default on MPI. The PSBLAS library contains, among 
+massage exchanges are encapsulated in an application layer which is by
+default based on MPI. The PSBLAS library contains, among 
 others, 
 subroutines for sparse-matrix-by-dense-matrix multiplication, sparse
-triangular system solution, dot product, sparse matrix and data
+triangular system solution, dot product, sparse matrix, and data
 distribution preprocessing. 
-While addressing a distributed memory execution model the current
-PSBLAS design does not preclude different implementation pradigms. 
+While addressing a distributed memory execution model, the current
+PSBLAS design does not preclude different implementation paradigms. 
+ 
 MLD2P4 (Multi-level Domain Decomposition Parallel Preconditioners
-Package based on PSBLAS) is a package for parallel algebraic
+Package based on PSBLAS)~\cite{mld-toms} is a package for parallel algebraic
 multilevel preconditioners. A purely algebraic approach is used and no
 information about the underlying physical grid is needed to build the
-preconditioner. MLD2P4 preconditioner are intended to be used in
-conjuction with the iterative solvers available in the context of
+preconditioner. MLD2P4 preconditioners are intended to be used in
+conjunction with the iterative solvers available in the context of
 PSBLAS.
 
-Since in MLD2P4 inter-process data communiations is managed through
-PSBLAS, writing a CAF version give us dual benefit: first, we can compare MPI and CAF on Krylov subspace methods and simple preconditioners, using PSBLAS; secondly, we can compare MPI and CAF on multilevel preconditioners, since MLD2P4 data communication is actually managed on PSBLAS. 
+Since in MLD2P4 inter-process data communications is managed through
+PSBLAS, writing a CAF version give us a dual benefit: first, we can compare MPI and CAF on Krylov subspace methods and simple preconditioners, using PSBLAS; 
+secondly, we can compare MPI and CAF on multilevel preconditioners, since MLD2P4 data communication is actually managed on PSBLAS. 
 Additionally, since both PSBLAS and MLD2P4 are open source, once the
-CAF version is released CAF programmers will be able to use them
+CAF version is released, CAF programmers will be easily able to use it 
 inside their scientific application. 
 
  
-\section{Iterative solver Implementation}
+\section{Iterative Solver Implementation} \label{sec:iterative}
+
 We converted the PSBLAS code gradually from MPI to CAF, thus having
 the two communication strategies coexisting in the same code.  
 We detected three communication patterns to modify:
 \begin{enumerate}
-\item The halo exchange
-\item Collective subroutines
-\item Point-to-point communication in data distribution
+\item The halo exchange;
+\item Collective subroutines;
+\item Point-to-point communication in data distribution.
 \end{enumerate}
 In the following, we address the three patterns  separately.
 
@@ -349,7 +356,7 @@ situation is much more complicated if, as in PSBLAS, we want to handle
 unstructured meshes and arbitrary domain partitionings. In this  case
 the only way to proceed is to have matched lists of entries to be
 retrieved and/or sent; a direct access of the remote entries could be
-implementeed with indirect addressing, with a statement like
+implemented with indirect addressing, with a statement like
 \lstset{language=Fortran} 
 {\small
 \begin{lstlisting}
@@ -407,12 +414,13 @@ exchange does not fit into the available space.
 %%     end if
 %%   end if
 %% \end{lstlisting}
- With MPI the buffers are local, and since in most systems allocation
- is cheap we normally release the buffers to save memor.
+ With MPI the buffers are local, and, since in most systems allocation
+ is cheap, we %normally 
+ release the buffers to save memory.
 Before showing performance results for  the halo exchange, we 
 make a comparison between MPI and CAF for the halo exchange in terms
 of impact on software quality.  
-The interface for the halo exchange in psblas is \verb|psi_swapdata|;
+The interface for the halo exchange in PSBLAS is \verb|psi_swapdata|;
 this interface requires different implementations for the various data
 types  in PSBLAS (integer, real and complex), and  for both single
 vectors and multivectors, i.e. sets of related vectors stored as
@@ -420,21 +428,21 @@ vectors and multivectors, i.e. sets of related vectors stored as
 are thus accrued multiple times.
 
 Comparing the  MPI and the CAF versions we see that there are benefits
-in : 
+in: 
 \begin{enumerate}
 \item Number of input variables: the MPI version requires 12 input
-  variables, while the CAF version requires 8 input variables 
+  variables, while the CAF version requires only 8 input variables; 
 \item Number of lines of code for the single implementation is 185 for
-  MPI and 116 for CAF;  
+  MPI and 116 for CAF.   
 \end{enumerate}
 Note that many of the lines of code are actually devoted to  tests for error
 conditions and other general tasks,  in common among the two versions;
 the impact on the strict communication part of the code is even larger
-than appears at first glance. 
+than what appears at first glance. 
   
 \subsection{Collective Subroutines and Point-to-point in Data Distribution}
 
-Here we take into account all the subroutines performing collective
+We now consider all the subroutines performing collective
 communications, in which all images take part in the
 communication. While rewriting the halo exchange using CAF leads to a
 reduction in the number of lines in the code, in this case we can
@@ -515,8 +523,8 @@ As an example, the code implementing the caf\_alltoall looks like:
     rcv(1:snd_tot)=buffer(1:snd_tot)
 \end{lstlisting}}
 \fi
-The actual code would contain a number of error checking options that
-are not shown here for clarity.
+The actual code would contain a number of error checking options %that are 
+not shown for clarity.
 For what it concerns the reduction operations, the \verb|co_reduce| is
 already part of the standard, and here the difference in code is
 obvious. For the  MPI version we have:
@@ -540,7 +548,7 @@ call co_reduce(co_dat_,caf_dnrm2)
 \end{center}
 The CAF syntax is more compact and does not differentiate between
 input and output variables, which suits perfectly our usage and
-eliminates the need for  the extra euxiliary variable dat\_. 
+eliminates the need for  the extra auxiliary variable dat\_. 
 
 %% Finally, we modified the psb\_matdist subroutines, an utility
 %% subroutine that uses point-to-point communications to distribute a
@@ -551,15 +559,16 @@ eliminates the need for  the extra euxiliary variable dat\_.
 %% images.
 
 
-\section{Results}
-CAF and MPI versions of PSBLAS and MLD2P4 have been tested on matrices
+\section{Experimental Results} \label{sec:results}
+
+We have tested CAF and MPI versions of PSBLAS and MLD2P4 on matrices
 generated by 2D and 3D PDEs. 
-The experiments were carried out on the Yoda linux cluster, operated
-by the Naples Branch of the CNR Institute for High-Performace
+The experiments were carried out on the Yoda Linux cluster, operated
+by the Naples Branch of the CNR Institute for High-Performance
 Computing and Networking. Its compute nodes consist of 2 Intel Sandy
 Bridge E5-2670 8-core processors and 192 GB of RAM, connected via
 Infiniband. 
-Both PSBLAS, MLD2P4 and OpenCoarrays-1.9 have been compiled on the top
+Both PSBLAS, MLD2P4, and OpenCoarrays-1.9 have been compiled on the top
 of MPICH-3.2 and GNU 7.1. 
 
 In PSBLAS and MLD2P4 it is possible to create the matrix corresponding to the PDE $
@@ -567,36 +576,33 @@ In PSBLAS and MLD2P4 it is possible to create the matrix corresponding to the PD
 $ for the 2D problem and $
 -a_1\frac{\mathrm d}{\mathrm d x \mathrm d x} \left(u \right) -a_2\frac{\mathrm d}{\mathrm d y \mathrm d y} \left(u \right) -a_3\frac{\mathrm d}{\mathrm d z \mathrm d z} \left(u \right) +b_1\frac{\mathrm d}{\mathrm d x} \left(u \right) +b_2\frac{\mathrm d}{\mathrm d y} \left(u \right) b_3\frac{\mathrm d}{\mathrm d z} \left(u \right)
  + cu = f$ for the 3D problem. The user can set the parameter $idim$. The dimension of the grid is then $idim^2$ for the 2D case and $idim^3$ for the 3D case.
- The resulting linear system is solved using a Biconjugated Conjugate Gradient Stabilized (BiCGSTAB) with a Block Jacobi preconditioner. The iterations are stopped when the 2-norm of the residuals vector achieved a reduction by a factor of $10^{-9}$
+ The resulting linear system is solved using a Biconjugated Conjugate Gradient Stabilized (BiCGSTAB) with a Block Jacobi preconditioner. The iterations are stopped when the 2-norm of the residuals vector achieves a reduction by a factor of $10^{-9}$.
  
-First we tested weak scalability for a 2D problem by keeping (roughly) constant the number of lines per process (Table \ref{weak}). 
-
-
-\begin{table}[]
+First, we tested weak scalability for a 2D problem by keeping (roughly) constant the number of lines per process (Table~\ref{weak}). 
+%
+\begin{table}[h]
 \centering
-\caption{Weak scalability test for a 2D problem ($a_1=a_2=\frac{1}{80}$, $b_1=b_2= \frac{1}{\sqrt{2}}$,  $c=0$ dim = $idim^2$)}
+\caption{Weak scalability test for a 2D problem ($a_1=a_2=\frac{1}{80}$, $b_1=b_2= \frac{1}{\sqrt{2}}$,  $c=0$, dim = $idim^2$)}
 \label{weak}
 \begin{tabular}{@{}rrrrr@{}}
 \toprule
-\multicolumn{1}{c}{np} & \multicolumn{1}{c}{idim} & \multicolumn{1}{c}{MPI} & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}CAF \\ ($sync images$)\end{tabular}} & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}CAF\\ (events)\end{tabular}} \\ \midrule
+\multicolumn{1}{c}{np} & \multicolumn{1}{c}{idim} & \multicolumn{1}{c}{MPI} & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}CAF \\ (sync images)\end{tabular}} & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}CAF\\ (events)\end{tabular}} \\ \midrule
 1                      & 250                      & 0.64                 & 0.90                                                                          & 0.89                                                                    \\
 2                      & 350                      & 0.99                 & 1.03                                                                           & 1.0                                                                      \\
 4                      & 500                      & 1.37                  & 1.58                                                                           & 1.33                                                                     \\
 8                      & 700                      & 2.00                  & 2.20                                                                           & 3.88                                                                     \\
 16                     & 1000                     & 3.03                  & 3.82                                                                           & 4.41                                                                     \\
 32                     & 1400                     & 5.07                  & 5.36                                                                           & 6.10                                                                     \\
-64              
-
-      & 2000                     & 6.52                  & 6.81                                                                           & 7.79                                                                     \\ \bottomrule
+64                    & 2000                     & 6.52                  & 6.81                                                                           & 7.79                                                                     \\ \bottomrule
 \end{tabular}
 \end{table}
 
 For CAF, two versions of the halo exchange have been tested: one performing synchronization through the use of events, the other through the use of the $sync images$ statement. While we expected synchronization through events to perform better, we actually observed that the version with $sync images$ is faster especially on many processes. In this case, MPI and CAF versions have total execution times that are very similar. 
-Secondly, strong scalability tests have been performed for both 2D and 3D problems. Again, halo exchange with sync images performs better: for this reason in the following we show only results for this case. Table \ref{strong} shows results for the 3D problem.
- 
-\begin{table}[]
+Secondly, strong scalability tests have been performed for both 2D and 3D problems. Again, halo exchange with sync images performs better: for this reason in the following we show only the results for this case. Table~\ref{strong} shows results for the 3D problem.
+ %
+\begin{table}[ht]
 \centering
-\caption{Strong scaling for a 3D problem: BiCGSTAB with BJAC preconditioner ($a_1=a_2=a_3=\frac{1}{80}$, $b_1=b_2=b_3=\frac{1}{\sqrt{3}}$, $c=0$,$idim=200$}
+\caption{Strong scaling for a 3D problem: BiCGSTAB with BJAC preconditioner ($a_1=a_2=a_3=\frac{1}{80}$, $b_1=b_2=b_3=\frac{1}{\sqrt{3}}$, $c=0$, $idim=200$)}
 \label{strong}
 \begin{tabular}{@{}rrr@{}}
 \toprule
@@ -611,11 +617,12 @@ Secondly, strong scalability tests have been performed for both 2D and 3D proble
 \end{tabular}
 \end{table} 
 
-Finally, we show results for the 3D problem, using the multilevel preconditioner implemented in MLD2P4. BiCGSTAB is used, with a multiplicative multilevel preconditioner, smoothed decoupled aggregation algorithm. The iterations are stopped when the 2-norm of the residuals vector achieved a reduction by a factor of $10^{-6}$ and a Jacobi smoother is used. The coarsest level matrix is distributed among processes and an incomplete LU factorization is used to solve the coarsest level matrix. Results are shown in Table \ref{Strong2}. Again performances of MPI and CAF are comparable in term of execution time. In the table, both the preconditioner building time (tprec) and the solution time are shown (tsolve). 
+Finally, we show results for the 3D problem, using the multilevel preconditioner implemented in MLD2P4. We used BiCGSTAB with a multiplicative multilevel preconditioner, smoothed decoupled aggregation algorithm. The iterations are stopped when the 2-norm of the residuals vector achieved a reduction by a factor of $10^{-6}$ and a Jacobi smoother is used. The coarsest level matrix is distributed among processes and an incomplete LU factorization is used to solve the coarsest level matrix. Table~\ref{Strong2}  shows    
+both the preconditioner building time (tprec) and the solution time (tsolve). Again, the performances of MPI and CAF are comparable in term of execution time. 
 
-\begin{table}[]
+\begin{table}[ht]
 \centering
-\caption{Strong scaling for a 3D problem: BiCGSTAB with with a 2 level preconditioner ($a_1=a_2=a_3=1$, $b_1=b_2=b_3=0$, $c=0$,$idim=200$}
+\caption{Strong scaling for a 3D problem: BiCGSTAB with a 2 level preconditioner ($a_1=a_2=a_3=1$, $b_1=b_2=b_3=0$, $c=0$,$idim=200$}
 \label{Strong2}
 \begin{tabular}{@{}rrrll@{}}
 \multicolumn{1}{l}{}   & \multicolumn{2}{c}{MPI}                                & \multicolumn{2}{c}{CAF} \\ \midrule
@@ -630,7 +637,7 @@ Finally, we show results for the 3D problem, using the multilevel preconditioner
 \end{tabular}
 \end{table} 
   
-\section{Conclusions}
+\section{Conclusions} \label{sec:concl}
 
 We successfully obtained a first migration of the  PSBLAS library from
 MPI to CAF. Since MLD2P4 
@@ -644,44 +651,28 @@ beginning, we think that the previous examples show the capability of
 CAF to express parallelism in a simpler way than MPI. In all cases,
 CAF code is shorter, clearer and easier to read. However, the CAF
 programmer need to provide an interface for most of MPI collective
-subroutines, which can increase the lenght of the code.  
+subroutines, which can increase the length of the code.  
 
 We tested both the MPI and CAF versions on problems arising from
 discretization of 2D and 3D PDEs. Neither CAF nor MPI version has
 shown a clear superiority in terms of performance, with execution time
 almost identical in the two cases.  The initial migration from MPI to CAF
 was achieved without  a loss of performance; however this is only the
-first step. In future work we plan to explore in further detail possible
+first step. In future work we plan to explore %in further detail possible
 alternative strategies for critical operations, such as  remote
 indirect addressing, usage of \emph{get} versus \emph{put} strategis
 for one sided communications, and a thorough study of the \verb|EVENT|
 facility performance. 
 
-\section{Acknowledgments} 
-This work has been partially funded  from the European Union's Horizon 2020 Research
+\section*{Acknowledgments} 
+This work has been partially funded  by the EU Horizon 2020 Research
 and Innovation Programme under Grant Agreement No.~676629
 (Project EoCoE).
 % (call H2020-EINFRA-2015-1, project ID: 676629, \url{http://www.eocoe.eu}).
-The authors wish to thank Dr. Pasqua D'Ambra (CNR, Napoli, Italy),
+We thank Dr. Pasqua D'Ambra (CNR, Italy) 
 for her help in running the experimental tests.
  
 \bibliographystyle{unsrt}
 \bibliography{psblas-caf}
 
 \end{document}
- 
-\begin{thebibliography}{99}
-\bibitem{r6}
-Numrich, Robert W., and John Reid. "Co-Array Fortran for parallel programming." ACM Sigplan Fortran Forum. Vol. 17. No. 2. ACM, 1998.
-\bibitem{r7}
-Metcalf, Michael, John Reid, and Malcolm Cohen. Modern Fortran Explained. Oxford University Press, 2011.
-\bibitem{r8}
-UPC Consortium. UPC Language Specifications, v1.2.
-Tech Report LBNL-59208, Lawrence Berkeley
-National Lab, 2005.
-\bibitem{r10}
-V. Saraswat, B. Bloom, I. Peshansky, O. Tardieu, and
-D. Grove. The X10 language specification, v2.2.3,
-2012.
-\end{thebibliography}
-

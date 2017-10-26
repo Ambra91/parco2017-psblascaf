@@ -166,7 +166,7 @@ address="Berlin, Heidelberg    ",
   url = {http://www.gwu.edu/~upc/publications/LBNL-59208.pdf},
 
 @article{Charles:2005,
- author = {Charles, Philippe and Grothoff, Christian and Saraswat, Vijay and Donawa, Christopher and Kielstra, Allan and Ebcioglu, Kemal and von Praun, Christoph and Sarkar, Vivek},
+ author = {Charles, P. and Grothoff, C. and Saraswat, V. and Donawa, C. and Kielstra, A. and Ebcioglu, K. and von~Praun, C. and Sarkar, V.},
  title = {X10: An Object-oriented Approach to Non-uniform Cluster Computing},
  journal = {SIGPLAN Not.},
  issue_date = {October 2005},
@@ -186,26 +186,27 @@ address="Berlin, Heidelberg    ",
 } 
 
 @book{Metcalf:2011:MFE,
- author = {Metcalf, Michael and Reid, John and Cohen, Malcolm},
+ author = {Metcalf, M. and Reid, J. and Cohen, M.},
  title = {Modern Fortran Explained},
  year = {2011},
  isbn = {0199601410, 9780199601417},
  edition = {4th},
- publisher = {Oxford University Press, Inc.},
+ publisher = {Oxford University Press},
  address = {New York, NY, USA},
 } 
 
 @book{barrett1994templates,
-  title={Templates for the solution of linear systems: building blocks for iterative methods},
-  author={Barrett, Richard and Berry, Michael and Chan, Tony F and Demmel, James and Donato, June and Dongarra, Jack and Eijkhout, Victor and Pozo, Roldan and Romine, Charles and Van der Vorst, Henk},
+  title={Templates for the Solution of Linear Systems: Building Blocks for Iterative Methods},
+  author={Barrett, R. and Berry, M. and Chan, T.F. and Demmel, J. and Donato, J. and Dongarra, J. and Eijkhout, V. and Pozo, R. and Romine, C. and Van der Vorst, H.},
   year={1994},
-  publisher={SIAM}
+  publisher={SIAM}, 
+   address = {Philadelphia, PA, USA},
 }
 
 @article{brandt1977multi,
   title={Multi-level adaptive solutions to boundary-value problems},
-  author={Brandt, Achi},
-  journal={Mathematics of computation},
+  author={Brandt, A.},
+  journal={Mathematics of Computation},
   volume={31},
   number={138},
   pages={333--390},
@@ -213,15 +214,15 @@ address="Berlin, Heidelberg    ",
 }
 
 @book{saad2003iterative,
-  title={Iterative methods for sparse linear systems},
-  author={Saad, Yousef},
+  title={Iterative Methods for Sparse Linear Systems},
+  author={Saad, Y.},
   year={2003},
   publisher={SIAM}
 }
 
 @article{bramble1990parallel,
   title={Parallel multilevel preconditioners},
-  author={Bramble, James H and Pasciak, Joseph E and Xu, Jinchao},
+  author={Bramble, J.H. and Pasciak, J.E. and Xu, J.},
   journal={Mathematics of Computation},
   volume={55},
   number={191},
@@ -231,14 +232,14 @@ address="Berlin, Heidelberg    ",
 
 @article{duff2002overview,
   title={An overview of the sparse basic linear algebra subprograms: The new standard from the BLAS technical forum},
-  author={Duff, Iain S and Heroux, Michael A and Pozo, Roldan},
-  journal={ACM Transactions on Mathematical Software (TOMS)},
+  author={Duff, I.S and Heroux, M.A. and Pozo, R.},
+  journal=ACMTMS,
   volume={28},
   number={2},
   pages={239--267},
   year={2002},
-  publisher={ACM}
 }
+  publisher={ACM}
 
 @article{whaley1997user,
   title={A User's Guide to the BLACS v1. 1},
@@ -249,39 +250,50 @@ address="Berlin, Heidelberg    ",
 }
 
 @article{ipsen1998idea,
-  title={The idea behind Krylov methods},
-  author={Ipsen, Ilse CF and Meyer, Carl D},
+  title="The idea behind {K}rylov methods",
+  author={Ipsen, I.C.F. and Meyer, C.D},
   journal={American Mathematical Monthly},
   pages={889--899},
   year={1998},
   publisher={JSTOR}
 }
 
-@misc{shewchuk1994introduction,
-  title={An introduction to the conjugate gradient method without the agonizing pain},
-  author={Shewchuk, Jonathan Richard and others},
-  year={1994},
-  publisher={Carnegie-Mellon University. Department of Computer Science}
-}
+@techreport{shewchuk1994introduction,
+ author = {Shewchuk, J.R.},
+ title = {An Introduction to the Conjugate Gradient Method Without the Agonizing Pain},
+ year = {1994},
+ source = {http://www.ncstrl.org:8900/ncstrl/servlet/search?formname=detail\&id=oai%3Ancstrlh%3Acmucs%3ACMU%2F%2FCS-94-125},
+ institution = {Carnegie Mellon University},
+ address = {Pittsburgh, PA, USA},
+} 
 
 @article{saad1986gmres,
-  title={GMRES: A generalized minimal residual algorithm for solving nonsymmetric linear systems},
-  author={Saad, Youcef and Schultz, Martin H},
-  journal={SIAM Journal on scientific and statistical computing},
+  title="{GMRES}: A generalized minimal residual algorithm for solving nonsymmetric linear systems",
+  author={Saad, Y. and Schultz, M.H.},
+  journal={SIAM J. Sci. Comput.},
   volume={7},
   number={3},
   pages={856--869},
   year={1986},
-  publisher={SIAM}
 }
+  publisher={SIAM}
 
 @article{van1992bi,
-  title={Bi-CGSTAB: A fast and smoothly converging variant of Bi-CG for the solution of nonsymmetric linear systems},
-  author={Van der Vorst, Henk A},
-  journal={SIAM Journal on scientific and Statistical Computing},
+  title="{Bi-CGSTAB}: A fast and smoothly converging variant of Bi-CG for the solution of nonsymmetric linear systems",
+  author={Van der Vorst, H.A.},
+  journal={SIAM J. Sci. Comput.},
   volume={13},
   number={2},
   pages={631--644},
   year={1992},
-  publisher={SIAM}
-}
+ }
+ publisher={SIAM}
+ 
+ @inproceedings{Chapman:2010,
+ author = {Chapman, B. and Curtis, T. and Pophale, S. and Poole, S. and Kuehn, J. and Koelbel, C. and Smith, L.},
+ title = "{Introducing OpenSHMEM: SHMEM for the PGAS community}",
+ booktitle = {Proc. of the 4th Int'l Conf. on Partitioned Global Address Space Programming Model},
+ series = {PGAS '10},
+ year = {2010},
+ pages = {2:1--2:3},
+} 
