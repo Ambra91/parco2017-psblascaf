@@ -72,7 +72,7 @@ Fortran 2008 and provide a syntactic extension of Fortran to
 support parallel programming; in the sequel we will use Fortran
 instead of CAF to highlight the fact that today the parallelization is
 an integral part of the language.
-Following the  Partitioned Global Address Space programming model,
+Following the  Partitioned Global Address Space (PGAS) programming model,
 in Fortran the program is replicated among a certain number of images,
 executing asynchronously. 
 The PGAS model combines elegance and simplicity, by allowing one-sided
@@ -135,15 +135,14 @@ We conclude in Section~\ref{sec:concl} with some final remarks.
 Coarrays extend the original Fortran language with minimal syntactic 
 constructs, allowing for Single Program Multi Data (SPMD) parallel
 programming.  
-They follow the Partitioned Global Address Space (PGAS) parallel
-programming model, which is an effective alternative combining the
+They follow the PGAS parallel programming model, which is an effective alternative combining the
 advantages of the SPMD programming style for distributed memory
 systems with the data referencing semantics of shared memory systems.  
 In the PGAS model, multiple ``images'' participate into  the global
 address space, each one of them having a local portion and access to
 the shared portion of the address space. 
 Other languages based on the PGAS model include Unified Parallel C
-(UPC)~\cite{UPCSpec},  Chapel~\cite{chapel}, X10~\cite{Charles:2005} and OpenSHMEM~\cite{Chapman:2010}.
+(UPC)~\cite{UPCSpec},  Chapel~\cite{chapel}, X10~\cite{Charles:2005}, and OpenSHMEM~\cite{Chapman:2010}.
 
 With coarrays most of the parallel bookkeeping is handled behind the scene by
 the compiler;  compared to MPI, the parallelization is easier to
@@ -576,9 +575,9 @@ In PSBLAS and MLD2P4 it is possible to create the matrix corresponding to the PD
 $ for the 2D problem and $
 -a_1\frac{\mathrm d}{\mathrm d x \mathrm d x} \left(u \right) -a_2\frac{\mathrm d}{\mathrm d y \mathrm d y} \left(u \right) -a_3\frac{\mathrm d}{\mathrm d z \mathrm d z} \left(u \right) +b_1\frac{\mathrm d}{\mathrm d x} \left(u \right) +b_2\frac{\mathrm d}{\mathrm d y} \left(u \right) b_3\frac{\mathrm d}{\mathrm d z} \left(u \right)
  + cu = f$ for the 3D problem. The user can set the parameter $idim$. The dimension of the grid is then $idim^2$ for the 2D case and $idim^3$ for the 3D case.
- The resulting linear system is solved using a Biconjugated Conjugate Gradient Stabilized (BiCGSTAB) with a Block Jacobi preconditioner. The iterations are stopped when the 2-norm of the residuals vector achieves a reduction by a factor of $10^{-9}$.
+ The resulting linear system is solved using a Biconjugated Conjugate Gradient Stabilized (Bi-CGSTAB)~\cite{van1992bi} with a Block Jacobi preconditioner. The iterations are stopped when the 2-norm of the residuals vector achieves a reduction by a factor of $10^{-9}$.
  
-First, we analyze the weak scalability for the 2D problem by keeping (roughly) constant the number of lines per process (Table~\ref{weak}). 
+First, we analyze the weak scalability for the 2D problem by keeping (roughly) constant the number of lines per process; the results are shown in Table~\ref{weak}. 
 %, time values are measured in sec.). 
 %
 \begin{table}[h]
@@ -599,12 +598,13 @@ First, we analyze the weak scalability for the 2D problem by keeping (roughly) c
 \end{table}
 
 For CAF, we tested two versions of the halo exchange: one performing synchronization through the use of events, the other through the use of the $sync images$ statement. While we expect  synchronization through events to perform better, we actually observe that the version with $sync images$ is faster especially on many processes. In this case, MPI and CAF versions have total execution times that are very similar. 
+%
 Then, we performed strong scalability tests for both 2D and 3D problems. Again, halo exchange with sync images performs better: 
 for this reason, in the following we show only the results for such a case. Table~\ref{strong} shows the execution times for the 3D problem.
  %
 \begin{table}[ht]
 \centering
-\caption{Strong scalability test for the 3D problem: BiCGSTAB with BJAC preconditioner ($a_1=a_2=a_3=\frac{1}{80}$, $b_1=b_2=b_3=\frac{1}{\sqrt{3}}$, $c=0$, $idim=200$); 
+\caption{Strong scalability test for the 3D problem: Bi-CGSTAB with BJAC preconditioner ($a_1=a_2=a_3=\frac{1}{80}$, $b_1=b_2=b_3=\frac{1}{\sqrt{3}}$, $c=0$, $idim=200$); 
 execution times are in sec.}
 \label{strong}
 \begin{tabular}{@{}rrr@{}}
@@ -620,12 +620,12 @@ execution times are in sec.}
 \end{tabular}
 \end{table} 
 
-Finally, we show results for the 3D problem, using the multilevel preconditioner implemented in MLD2P4. We used BiCGSTAB with a multiplicative multilevel preconditioner, smoothed decoupled aggregation algorithm. The iterations are stopped when the 2-norm of the residuals vector achieved a reduction by a factor of $10^{-6}$ and a Jacobi smoother is used. The coarsest level matrix is distributed among processes and an incomplete LU factorization is used to solve the coarsest level matrix. Table~\ref{Strong2}  shows    
+Finally, we show results for the 3D problem, using the multilevel preconditioner implemented in MLD2P4. Specifically, we used Bi-CGSTAB with a multiplicative multilevel preconditioner, smoothed decoupled aggregation algorithm. The iterations are stopped when the 2-norm of the residuals vector achieved a reduction by a factor of $10^{-6}$ and a Jacobi smoother is used. The coarsest level matrix is distributed among processes and an incomplete LU factorization is used to solve the coarsest level matrix. Table~\ref{Strong2}  shows    
 both the preconditioner building time (tprec) and the solution time (tsolve). Again, the performances of MPI and CAF are comparable in term of execution time. 
 
 \begin{table}[ht]
 \centering
-\caption{Strong scalability test for the 3D problem: BiCGSTAB with a 2 level preconditioner ($a_1=a_2=a_3=1$, $b_1=b_2=b_3=0$, $c=0$,$idim=200$); 
+\caption{Strong scalability test for the 3D problem: Bi-CGSTAB with a 2 level preconditioner ($a_1=a_2=a_3=1$, $b_1=b_2=b_3=0$, $c=0$,$idim=200$); 
 execution times are in sec.} 
 \label{Strong2}
 \begin{tabular}{@{}rrrll@{}}
