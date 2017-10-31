@@ -128,7 +128,7 @@ In Sections~\ref{sec:CAF} and~\ref{sec:PSBLAS} we provide an overview of Fortran
 and PSBLAS and MLD2P4 libraries. 
 In Section~\ref{sec:iterative} we present the migration to CAF of the iterative solver implementation, 
 focusing on the communication patterns and discuss experimental results in Section~\ref{sec:results}. 
-We conclude in Section~\ref{sec:concl}
+We conclude in Section~\ref{sec:concl} with some final remarks. 
 
 \section{Fortran Coarrays} \label{sec:CAF}
 
@@ -186,7 +186,7 @@ $num\_images()$. %% The total number of images can be
 %% different from the total number of processors and it can be decided at
 %% compile, link or runtime depending on the implementation.
 The exact mechanism to determine how many images will be executed
-depends on the compiler's implementation: most implementation use a
+depends on the compiler's implementation: most implementations use a
 runtime scheme similar to (or directly based on) that of MPI. 
 
 Data transfers in Fortran are asynchronous and non-blocking;
@@ -578,11 +578,12 @@ $ for the 2D problem and $
  + cu = f$ for the 3D problem. The user can set the parameter $idim$. The dimension of the grid is then $idim^2$ for the 2D case and $idim^3$ for the 3D case.
  The resulting linear system is solved using a Biconjugated Conjugate Gradient Stabilized (BiCGSTAB) with a Block Jacobi preconditioner. The iterations are stopped when the 2-norm of the residuals vector achieves a reduction by a factor of $10^{-9}$.
  
-First, we tested weak scalability for a 2D problem by keeping (roughly) constant the number of lines per process (Table~\ref{weak}). 
+First, we analyze the weak scalability for the 2D problem by keeping (roughly) constant the number of lines per process (Table~\ref{weak}). 
+%, time values are measured in sec.). 
 %
 \begin{table}[h]
 \centering
-\caption{Weak scalability test for a 2D problem ($a_1=a_2=\frac{1}{80}$, $b_1=b_2= \frac{1}{\sqrt{2}}$,  $c=0$, dim = $idim^2$)}
+\caption{Weak scalability test for a 2D problem ($a_1=a_2=\frac{1}{80}$, $b_1=b_2= \frac{1}{\sqrt{2}}$,  $c=0$, dim = $idim^2$); execution times are in sec.} 
 \label{weak}
 \begin{tabular}{@{}rrrrr@{}}
 \toprule
@@ -597,12 +598,14 @@ First, we tested weak scalability for a 2D problem by keeping (roughly) constant
 \end{tabular}
 \end{table}
 
-For CAF, two versions of the halo exchange have been tested: one performing synchronization through the use of events, the other through the use of the $sync images$ statement. While we expected synchronization through events to perform better, we actually observed that the version with $sync images$ is faster especially on many processes. In this case, MPI and CAF versions have total execution times that are very similar. 
-Secondly, strong scalability tests have been performed for both 2D and 3D problems. Again, halo exchange with sync images performs better: for this reason in the following we show only the results for this case. Table~\ref{strong} shows results for the 3D problem.
+For CAF, we tested two versions of the halo exchange: one performing synchronization through the use of events, the other through the use of the $sync images$ statement. While we expect  synchronization through events to perform better, we actually observe that the version with $sync images$ is faster especially on many processes. In this case, MPI and CAF versions have total execution times that are very similar. 
+Then, we performed strong scalability tests for both 2D and 3D problems. Again, halo exchange with sync images performs better: 
+for this reason, in the following we show only the results for such a case. Table~\ref{strong} shows the execution times for the 3D problem.
  %
 \begin{table}[ht]
 \centering
-\caption{Strong scaling for a 3D problem: BiCGSTAB with BJAC preconditioner ($a_1=a_2=a_3=\frac{1}{80}$, $b_1=b_2=b_3=\frac{1}{\sqrt{3}}$, $c=0$, $idim=200$)}
+\caption{Strong scalability test for the 3D problem: BiCGSTAB with BJAC preconditioner ($a_1=a_2=a_3=\frac{1}{80}$, $b_1=b_2=b_3=\frac{1}{\sqrt{3}}$, $c=0$, $idim=200$); 
+execution times are in sec.}
 \label{strong}
 \begin{tabular}{@{}rrr@{}}
 \toprule
@@ -622,9 +625,11 @@ both the preconditioner building time (tprec) and the solution time (tsolve). Ag
 
 \begin{table}[ht]
 \centering
-\caption{Strong scaling for a 3D problem: BiCGSTAB with a 2 level preconditioner ($a_1=a_2=a_3=1$, $b_1=b_2=b_3=0$, $c=0$,$idim=200$}
+\caption{Strong scalability test for the 3D problem: BiCGSTAB with a 2 level preconditioner ($a_1=a_2=a_3=1$, $b_1=b_2=b_3=0$, $c=0$,$idim=200$); 
+execution times are in sec.} 
 \label{Strong2}
 \begin{tabular}{@{}rrrll@{}}
+\toprule
 \multicolumn{1}{l}{}   & \multicolumn{2}{c}{MPI}                                & \multicolumn{2}{c}{CAF} \\ \midrule
 \multicolumn{1}{c}{np} & \multicolumn{1}{c}{tprec} & \multicolumn{1}{c}{tsolve} & tprec      & tsolve     \\ \midrule
 1                      & 37.5                      & 35.8                       & 37.4       & 35.6       \\
@@ -654,13 +659,13 @@ programmer need to provide an interface for most of MPI collective
 subroutines, which can increase the length of the code.  
 
 We tested both the MPI and CAF versions on problems arising from
-discretization of 2D and 3D PDEs. Neither CAF nor MPI version has
-shown a clear superiority in terms of performance, with execution time
+discretization of 2D and 3D PDEs. Neither CAF nor MPI version have 
+shown a clear superiority in terms of performance, obtaining execution times 
 almost identical in the two cases.  The initial migration from MPI to CAF
-was achieved without  a loss of performance; however this is only the
+was achieved without  a loss of performance; however, this is only the
 first step. In future work we plan to explore %in further detail possible
 alternative strategies for critical operations, such as  remote
-indirect addressing, usage of \emph{get} versus \emph{put} strategis
+indirect addressing, usage of \emph{get} versus \emph{put} strategies 
 for one sided communications, and a thorough study of the \verb|EVENT|
 facility performance. 
 
